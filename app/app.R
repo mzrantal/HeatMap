@@ -148,14 +148,14 @@ paneelit <- c(
       "vuoden jäljellä olevat neljännekset asetetaan niin, että koko vuoden muutos vastaa ennustetta. ",
       "Muina vuosina vuosimuutos palautuu tilastollisesti edellisestä neljänneksestä kohti sarjan pitkän aikavälin ",
       "mediaania (2015 alkaen, rajattu välille −3…+5 %): poikkeamasta säilyy 80 % neljänneksessä. ",
-      "Datakeskusten ennuste on uutisoitu hankeputki ilmoitettujen valmistumisvuosien mukaan; erillisellä rivillä ",
-      "puuttuvat valmistumisvuodet on arvioitu hankevaiheesta."),
+      "Datakeskusten ennuste on uutisoitu hankeputki ilmoitettujen valmistumisvuosien mukaan; hankkeet ilman ",
+      "valmistumisvuotta eivät ole mukana."),
     tableOutput("oletukset"),
     p(class = "small text-body-secondary",
       "Datakeskusten uutisaineisto on Dataikkuna-hankeluettelosta (uutisointien perusteella koottu). ",
       "Hankkeen rakennusaika päätellään uutisteksteistä (rakentamisen alku, valmistumisen neljännes) tai oletuksista, ",
       "ja investointi jaetaan tasan rakennusajan neljänneksille. Kapasiteetti ja hankemäärä ovat rakenteilla olevien ",
-      "hankkeiden kanta. Hankkeet ilman valmistumisvuotta ovat mukana vain erillisellä arviorivillä; keskeytetyt eivät ole mukana. ",
+      "hankkeiden kanta. Hankkeet ilman valmistumisvuotta ja keskeytetyt hankkeet eivät ole mukana. ",
       "Hankekohtainen ajoitus: data/datakeskushankkeiden_ajoitus.csv. ",
       "Puuttuvat summat (0 M€) eivät ole mukana summissa.")
   )))

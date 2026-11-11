@@ -236,36 +236,27 @@ message(sprintf("  Datakeskushankkeita %d, joista valmistumisvuosi %d, keskeytet
                 nrow(DI), sum(!is.na(DI$valmistuminen)), sum(keskeytetty)))
 DI <- DI[!keskeytetty, ]
 
-# Hankkeille, joilta valmistumisvuosi puuttuu, arvioidaan vuosi uutisoinnin
-# vuodesta ja hankevaiheesta (esiselvitys +4, suunnittelu +3,
-# investointipäätös +2, käynnistys +1 vuotta). Käytetään vain erillisellä
-# ennusterivillä.
-VIIVE <- c("0" = 4, "1" = 3, "2" = 2, "3" = 1)
-viive <- VIIVE[substr(DI$vaihe, 1, 1)]
-viive[is.na(viive)] <- 3
-DI$valmistuminen_arvio <- ifelse(is.na(DI$valmistuminen),
-                                 as.integer(format(DI$pvm, "%Y")) + viive,
-                                 DI$valmistuminen)
+# Hankkeet, joilta valmistumisvuosi puuttuu, eivät ole mukana sarjoissa
+# (valmistumisvuotta ei imputoida).
 source("R/datakeskus_ajoitus.R", encoding = "UTF-8")
 DI$summa_num <- as.numeric(DI$summa)
 AJOITUS <- hankkeiden_ajoitus(DI, DI$valmistuminen)
-AJOITUS_ARVIO <- hankkeiden_ajoitus(DI, DI$valmistuminen_arvio)
-message(sprintf("  Ajoitus uutistekstistä %d hankkeelle, oletuksilla %d",
+message(sprintf("  Ajoitus uutistekstistä %d hankkeelle, oletuksilla %d, ilman valmistumisvuotta %d",
                 sum(!is.na(AJOITUS$ajoitus) & AJOITUS$ajoitus != "oletukset"),
-                sum(AJOITUS$ajoitus == "oletukset", na.rm = TRUE)))
-i_vali <- range(c(AJOITUS$alku, AJOITUS$loppu, AJOITUS_ARVIO$alku, AJOITUS_ARVIO$loppu), na.rm = TRUE)
+                sum(AJOITUS$ajoitus == "oletukset", na.rm = TRUE),
+                sum(is.na(DI$valmistuminen))))
+i_vali <- range(c(AJOITUS$alku, AJOITUS$loppu), na.rm = TRUE)
 DI_NELJ <- neljannekset_valilla(numero_neljannes(i_vali[1]), numero_neljannes(i_vali[2]))
 
 # Hankkeiden ajoitus talteen tarkistusta varten
 ajoitustaulu <- data.frame(
   investoija = DI$investoija, paikka = DI$paikka, vaihe = DI$vaihe,
   summa_meur = DI$summa_num, mw = as.numeric(DI$mw),
-  valmistumisvuosi = DI$valmistuminen, valmistumisvuosi_arvio = DI$valmistuminen_arvio,
-  rakentaminen_alkaa = ifelse(is.na(AJOITUS_ARVIO$alku), NA, numero_neljannes(AJOITUS_ARVIO$alku)),
-  valmistuu = ifelse(is.na(AJOITUS_ARVIO$loppu), NA, numero_neljannes(AJOITUS_ARVIO$loppu)),
-  ajoituksen_peruste = ifelse(is.na(DI$valmistuminen),
-                              paste("valmistumisvuosi arvioitu hankevaiheesta;", AJOITUS_ARVIO$ajoitus),
-                              AJOITUS_ARVIO$ajoitus),
+  valmistumisvuosi = DI$valmistuminen,
+  rakentaminen_alkaa = ifelse(is.na(AJOITUS$alku), NA, numero_neljannes(AJOITUS$alku)),
+  valmistuu = ifelse(is.na(AJOITUS$loppu), NA, numero_neljannes(AJOITUS$loppu)),
+  ajoituksen_peruste = ifelse(is.na(DI$valmistuminen), "ei mukana: valmistumisvuosi puuttuu",
+                              AJOITUS$ajoitus),
   uutinen = DI$linkki)
 
 # Neljännessarja rakennusajan mukaan
@@ -277,11 +268,18 @@ etenevat <- grepl("^(2|3)\\.", DI$vaihe)   # investointipäätös tai käynnisty
 summa <- as.numeric(DI$summa)
 mw <- as.numeric(DI$mw)
 
+# Tullin tuontitilasto (Uljas): toimistokoneet ja atk-laitteet
+message("Haetaan toimistokoneiden ja atk-laitteiden tuonti (Tulli, Uljas)...")
+source("R/uljas.R", encoding = "UTF-8")
+uljas_paivita()
+ULJAS <- uljas_neljannessarjat()
+
 # -----------------------------------------------------------------------------
 # 3. Heatmapien rivit aihealueittain
 # -----------------------------------------------------------------------------
 TK <- "Tilastokeskus"
 r <- function(aihe, sarja, df, lahde, yksikko, menetelma = "Neljännes / sama neljännes vuotta aiemmin") {
+  if (is.null(df)) return(NULL)
   df <- df[df$neljannes >= ALKU, c("neljannes", "arvo", "muutos")]
   if (nrow(df) == 0) return(NULL)
   data.frame(aihe = aihe, sarja = sarja, df, yksikko = yksikko,
@@ -363,10 +361,12 @@ rivit <- list(
     "Uutisointi (Dataikkuna)", "kpl", RAKA_KANTA),
   r("Datakeskusten rakentaminen", "Investointipäätös tai käynnistys: rakennusaikaiset investoinnit",
     dk_sarja(etenevat, summa), "Uutisointi (Dataikkuna)", "M€ / neljännes", RAKA),
-  r("Datakeskusten rakentaminen", "Rakennusaikaiset investoinnit, myös arvioidut valmistumisvuodet",
-    dk_sarja(kaikki, summa, ajoitus = AJOITUS_ARVIO),
-    "Uutisointi (Dataikkuna)", "M€ / neljännes",
-    paste(RAKA, "Puuttuva valmistumisvuosi arvioitu hankevaiheesta (esiselvitys +4, suunnittelu +3, päätös +2, käynnistys +1 v.)")),
+  r("Datakeskusten rakentaminen", "Tuonti: toimistokoneet ja atk-laitteet (SITC 75)",
+    ULJAS[["Toimistokoneet ja atk-laitteet (SITC 75)"]], "Tulli (Uljas, SITC)", "M€",
+    "Tuonnin arvo, kuukaudet summattu neljänneksiksi; neljännes / sama neljännes vuotta aiemmin"),
+  r("Datakeskusten rakentaminen", "Tuonti: atk-laitteet (SITC 752)",
+    ULJAS[["Atk-laitteet (SITC 752)"]], "Tulli (Uljas, SITC)", "M€",
+    "Tuonnin arvo, kuukaudet summattu neljänneksiksi; neljännes / sama neljännes vuotta aiemmin"),
   r("Datakeskusten rakentaminen", "Aloitukset: teollisuus- ja varastorakennukset", raku_sarja(RAKU, "2", "09T12", "raku-tilavuusToimenpide"),
     paste(TK, "raku/156f (välillinen mittari)"), "m³"),
 

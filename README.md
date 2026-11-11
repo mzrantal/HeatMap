@@ -37,9 +37,8 @@ katkoviivalla reunustettuina, ja ennusteet voi piilottaa.
    (vuodesta 2015 alkaen, rajattu välille −3…+5 %). Poikkeamasta säilyy 80 %
    neljänneksestä toiseen.
 3. **Datakeskukset**: Ennuste on uutisoitu hankeputki ilmoitettujen valmistumisvuosien
-   mukaan. Erillisellä rivillä on mukana myös hankkeet, joilta valmistumisvuosi puuttuu.
-   Niille vuosi arvioidaan hankevaiheesta: esiselvitys +4, suunnittelu +3,
-   investointipäätös +2 ja käynnistys +1 vuotta uutisoinnista.
+   mukaan. Hankkeet, joilta valmistumisvuosi puuttuu, eivät ole mukana
+   (valmistumisvuotta ei imputoida).
 
 Kaikki sarjat katkaistaan neljännekseen 2029Q4.
 
@@ -91,8 +90,7 @@ Hankkeet kohdistetaan rakennusajalleen (`R/datakeskus_ajoitus.R`):
   uutisoidun hankkeen rakentaminen alkaa viimeistään uutisoinnin neljänneksellä.
 - Investointi jaetaan tasan rakennusajan neljänneksille. Kapasiteetti ja
   hankemäärä ovat rakenteilla olevien hankkeiden kanta.
-- Hankkeet, joilta valmistumisvuosi puuttuu, ovat mukana vain erillisellä
-  arviorivillä. Keskeytetyt hankkeet jätetään pois.
+- Hankkeet, joilta valmistumisvuosi puuttuu, ja keskeytetyt hankkeet jätetään pois.
 
 Jokaisen hankkeen ajoitus ja sen peruste tallennetaan tiedostoon
 `app/data/datakeskushankkeiden_ajoitus.csv`. Ajoitusta kannattaa tarkistaa
