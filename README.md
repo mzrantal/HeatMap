@@ -24,12 +24,13 @@ loppuun (`R/ennuste.R`). Sovelluksessa ennustesolut näkyvät vaaleampina ja
 katkoviivalla reunustettuina, ja ennusteet voi piilottaa.
 
 1. **Julkaistut ennusteet** (`data/ennusteoletukset.csv`): Taulukossa on vuosimuutokset,
-   jotka on poimittu uutisoinnista ja ennustelaitosten julkaisuista. Lähteinä ovat
-   VM:n taloudellinen katsaus syksyllä 2026 (investoinnit), RT:n suhdannekatsaus
-   lokakuussa 2026 (asunto- ja infrarakentaminen, asuntoaloitukset) ja
+   jotka on poimittu uutisoinnista ja toimialojen julkaisuista. Lähteinä ovat
+   RT:n suhdannekatsaus lokakuussa 2026 (asunto- ja infrarakentaminen,
+   asuntoaloitukset) ja
    Sp-Kodin ja Säästöpankkiryhmän asuntokauppaennuste syyskuussa 2026 (kauppamäärät
    ja hinnat). Vuoden jäljellä olevat neljännekset asetetaan niin, että koko vuoden
-   muutos vastaa ennustetta. Taulukkoa voi päivittää käsin, kun uusia ennusteita
+   muutos vastaa ennustetta. Taloudellisia katsauksia (esim. VM) ei käytetä
+   lähteinä. Taulukkoa voi päivittää käsin, kun uusia ennusteita
    julkaistaan. Sarake `sarja_regex` kertoo, mihin sarjoihin rivi kohdistuu.
 2. **Tilastollinen jatke**: Vuosina, joille ei ole julkaistua ennustetta, vuosimuutos
    palautuu edellisestä neljänneksestä kohti sarjan pitkän aikavälin mediaania

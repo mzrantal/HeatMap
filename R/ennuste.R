@@ -5,7 +5,7 @@
 # viimeisimmän havainnon jälkeen kahdella tavalla:
 #
 # 1. Julkaistu ennuste (data/ennusteoletukset.csv): jos sarjalle on vuoden
-#    muutosennuste (VM, RT, pankit), vuoden jäljellä olevat neljännekset
+#    muutosennuste (esim. RT, pankit), vuoden jäljellä olevat neljännekset
 #    asetetaan niin, että koko vuoden muutos on ennusteen mukainen. Jo
 #    toteutuneet neljännekset painotetaan edellisen vuoden tasoilla.
 # 2. Tilastollinen jatke: vuosina, joille ei ole julkaistua ennustetta,

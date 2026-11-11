@@ -1,10 +1,4 @@
 aihe,sarja_regex,vuosi,muutos_pct,lahde,julkaistu,url
-Investoinnit yhteensä,^Kiinteän pääoman bruttomuodostus$,2026,7.8,VM Taloudellinen katsaus syksy 2026,2026-09,https://julkaisut.valtioneuvosto.fi/bitstreams/28ab5017-4818-40d6-b4a0-fe7c85d1653f/download
-Investoinnit yhteensä,^Kiinteän pääoman bruttomuodostus$,2027,4.4,VM Taloudellinen katsaus syksy 2026,2026-09,https://julkaisut.valtioneuvosto.fi/bitstreams/28ab5017-4818-40d6-b4a0-fe7c85d1653f/download
-Investoinnit yhteensä,^Kiinteän pääoman bruttomuodostus$,2028,3.6,VM Taloudellinen katsaus syksy 2026,2026-09,https://julkaisut.valtioneuvosto.fi/bitstreams/28ab5017-4818-40d6-b4a0-fe7c85d1653f/download
-Investoinnit yhteensä,^Julkiset investoinnit$,2026,19.5,"VM Taloudellinen katsaus syksy 2026 (""lähes 20 %"")",2026-09,https://julkaisut.valtioneuvosto.fi/bitstreams/28ab5017-4818-40d6-b4a0-fe7c85d1653f/download
-Investoinnit yhteensä,^Julkiset investoinnit$,2027,-2.1,VM Taloudellinen katsaus kesä 2026,2026-06,https://julkaisut.valtioneuvosto.fi/server/api/core/bitstreams/53119f62-1cf7-48ae-bf59-f42d03eed214/content
-Investoinnit yhteensä,^Yksityiset investoinnit$,2027,6.3,VM Taloudellinen katsaus kesä 2026,2026-06,https://julkaisut.valtioneuvosto.fi/server/api/core/bitstreams/53119f62-1cf7-48ae-bf59-f42d03eed214/content
 Investoinnit yhteensä,^Asuinrakennukset$,2026,-4,RT suhdannekatsaus lokakuu 2026 (asuntorakentaminen),2026-10,https://rt.fi/tiedotteet-ja-uutiset/2026/10/datakeskukset-ovat-vetaneet-rakentamisen-kasvuun/
 Investoinnit yhteensä,^Asuinrakennukset$,2027,1,RT suhdannekatsaus lokakuu 2026 (asuntorakentaminen),2026-10,https://rt.fi/tiedotteet-ja-uutiset/2026/10/datakeskukset-ovat-vetaneet-rakentamisen-kasvuun/
 Investoinnit yhteensä,^Maa- ja vesirakennukset$,2026,4,RT suhdannekatsaus lokakuu 2026 (infrarakentaminen),2026-10,https://www.inderes.fi/analyst-comments/rakennusteollisuuden-suhdannekatsaus-vahvisti-kuvaa-markkinan-kaksijakoisuudesta
