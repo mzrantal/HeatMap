@@ -11,6 +11,9 @@ library(bslib)
 library(ggplot2)
 
 DATA <- read.csv("data/heatmap.csv", encoding = "UTF-8", stringsAsFactors = FALSE)
+DATA$ennuste <- as.logical(DATA$ennuste)
+OLETUKSET <- if (file.exists("data/ennusteoletukset.csv"))
+  read.csv("data/ennusteoletukset.csv", encoding = "UTF-8", stringsAsFactors = FALSE) else NULL
 PAIVITETTY <- if (file.exists("data/paivitetty.txt")) readLines("data/paivitetty.txt", warn = FALSE)[1] else "?"
 
 AIHEET <- c(
@@ -60,12 +63,14 @@ heatmap_kuva <- function(d, raja, nayta_arvot) {
   pyor <- round(d$muutos)
   pyor[!is.na(pyor) & pyor == 0] <- 0   # ei "-0"
   d$teksti <- ifelse(is.na(pyor), "", formatC(pyor, format = "d"))
-  d$tumma <- !is.na(d$muutos) & abs(d$muutos) > 0.55 * raja
+  d$tumma <- !is.na(d$muutos) & abs(d$muutos) > 0.55 * raja & !d$ennuste
   nelj <- levels(d$neljannes_f)
   merkit <- ifelse(substr(nelj, 6, 6) == "1", nelj, substr(nelj, 5, 6))
 
+  ennuste <- d[d$ennuste, ]
   p <- ggplot(d, aes(x = neljannes_f, y = sarja_f, fill = muutos)) +
-    geom_tile(colour = "white", linewidth = 0.6) +
+    geom_tile(aes(alpha = ennuste), colour = "white", linewidth = 0.6, show.legend = FALSE) +
+    scale_alpha_manual(values = c(`FALSE` = 1, `TRUE` = 0.5)) +
     scale_fill_gradient2(
       low = VARI_NEG, mid = VARI_KESKI, high = VARI_POS, midpoint = 0,
       limits = c(-raja, raja), oob = scales::squish, na.value = VARI_PUUTTUU,
@@ -85,11 +90,23 @@ heatmap_kuva <- function(d, raja, nayta_arvot) {
       legend.key.width = unit(2.2, "cm"),
       legend.key.height = unit(0.35, "cm"),
       legend.title = element_text(size = 10, colour = "#52514e"),
-      plot.margin = margin(4, 8, 4, 4)
+      plot.margin = margin(16, 8, 4, 4)
     )
+  # Ennustesolut: vaaleampi väri, katkoviivareunus ja kursivoitu luku
+  if (nrow(ennuste)) {
+    p <- p + geom_tile(data = ennuste, fill = NA, colour = "#8a8984",
+                       linewidth = 0.35, linetype = "22", width = 0.86, height = 0.8)
+    eka <- match(min(ennuste$neljannes), nelj)
+    p <- p + geom_vline(xintercept = eka - 0.5, colour = "#52514e", linewidth = 0.5, linetype = "dashed") +
+      annotate("text", x = eka - 0.4, y = length(levels(d$sarja_f)) + 0.62, label = "ennuste →",
+               hjust = 0, vjust = 0, size = 3.2, colour = "#52514e") +
+      coord_cartesian(clip = "off")
+  }
   if (nayta_arvot) {
     koko <- if (length(nelj) > 32) 2.2 else 3   # pitkillä aikaväleillä pienempi teksti
-    p <- p + geom_text(aes(label = teksti, colour = tumma), size = koko, show.legend = FALSE) +
+    p <- p + geom_text(aes(label = teksti, colour = tumma,
+                           fontface = ifelse(ennuste, "italic", "plain")),
+                       size = koko, show.legend = FALSE) +
       scale_colour_manual(values = c(`FALSE` = "#0b0b0b", `TRUE` = "white"))
   }
   p
@@ -125,6 +142,15 @@ paneelit <- c(
       "vain täydet neljännekset ovat mukana. Kansantalouden tilinpidon ja rakentamisen ",
       "liikevaihtokuvaajan sarjoissa käytetään Tilastokeskuksen julkaisemaa vuosimuutosta. ",
       "Viimeisimmät tiedot ovat ennakollisia ja voivat tarkentua."),
+    h6("Ennusteet", class = "mt-3"),
+    p(class = "small text-body-secondary",
+      "Ennusteet ulottuvat vuoden 2029 loppuun. Jos sarjalle on julkaistu vuosiennuste (taulukko alla), ",
+      "vuoden jäljellä olevat neljännekset asetetaan niin, että koko vuoden muutos vastaa ennustetta. ",
+      "Muina vuosina vuosimuutos palautuu tilastollisesti edellisestä neljänneksestä kohti sarjan pitkän aikavälin ",
+      "mediaania (2015 alkaen, rajattu välille −3…+5 %): poikkeamasta säilyy 80 % neljänneksessä. ",
+      "Datakeskusten ennuste on uutisoitu hankeputki ilmoitettujen valmistumisvuosien mukaan; erillisellä rivillä ",
+      "puuttuvat valmistumisvuodet on arvioitu hankevaiheesta."),
+    tableOutput("oletukset"),
     p(class = "small text-body-secondary",
       "Datakeskusten uutisaineisto on Dataikkuna-hankeluettelosta (uutisointien perusteella koottu). ",
       "Hanke kohdistetaan ilmoitettuun valmistumisvuoteen, ja sen investointi ja kapasiteetti jaetaan tasan vuoden ",
@@ -148,11 +174,12 @@ ui <- page_sidebar(
                 step = 1, sep = ""),
     sliderInput("raja", "Väriasteikon raja (± %)", min = 5, max = 100, value = 25, step = 5),
     checkboxInput("arvot", "Näytä luvut soluissa", value = TRUE),
+    checkboxInput("ennusteet", "Näytä ennusteet (vuoden 2029 loppuun)", value = TRUE),
     hr(),
     p(class = "small text-body-secondary",
       span(style = paste0("color:", VARI_POS, ";font-weight:600"), "Sininen"), " = kasvua, ",
       span(style = paste0("color:", VARI_NEG, ";font-weight:600"), "punainen"), " = laskua vuoden takaisesta. ",
-      "Harmaa = ei tietoa."),
+      "Harmaa = ei tietoa. Vaaleat, katkoviivalla reunustetut solut ovat ennustetta."),
     p(class = "small text-body-secondary", "Vie hiiri solun päälle nähdäksesi tarkat luvut."),
     p(class = "small text-body-secondary", paste("Aineisto päivitetty:", PAIVITETTY))
   ),
@@ -166,8 +193,10 @@ server <- function(input, output, session) {
 
   rajattu <- reactive({
     v <- input$vuodet
-    DATA[as.integer(substr(DATA$neljannes, 1, 4)) >= v[1] &
-           as.integer(substr(DATA$neljannes, 1, 4)) <= v[2], ]
+    d <- DATA[as.integer(substr(DATA$neljannes, 1, 4)) >= v[1] &
+                as.integer(substr(DATA$neljannes, 1, 4)) <= v[2], ]
+    if (!isTRUE(input$ennusteet)) d <- d[!d$ennuste, ]
+    d
   })
 
   aiheen_data <- function(id) {
@@ -214,14 +243,17 @@ server <- function(input, output, session) {
             arvo <- if (is.na(rivi$arvo)) "–" else
               formatC(rivi$arvo, format = "f", digits = if (abs(rivi$arvo) < 1000) 1 else 0,
                       big.mark = " ", decimal.mark = ",")
-            teksti <- HTML(sprintf("<b>%s, %s</b>: muutos vuoden takaisesta %s &nbsp;·&nbsp; taso %s %s &nbsp;·&nbsp; <span class='text-body-secondary'>%s; %s</span>",
+            ennusteteksti <- if (isTRUE(rivi$ennuste))
+              sprintf("<br><b>Ennuste</b>: %s", htmltools::htmlEscape(rivi$ennusteen_lahde)) else ""
+            teksti <- HTML(sprintf("<b>%s, %s</b>: muutos vuoden takaisesta %s &nbsp;·&nbsp; taso %s %s &nbsp;·&nbsp; <span class='text-body-secondary'>%s; %s</span>%s",
                                    htmltools::htmlEscape(rivi$sarja), rivi$neljannes, muutos, arvo,
                                    htmltools::htmlEscape(rivi$yksikko),
-                                   htmltools::htmlEscape(rivi$lahde), htmltools::htmlEscape(rivi$menetelma)))
+                                   htmltools::htmlEscape(rivi$lahde), htmltools::htmlEscape(rivi$menetelma),
+                                   ennusteteksti))
           }
         }
       }
-      div(class = "small mt-2", style = "min-height:2.6em", teksti)
+      div(class = "small mt-2", style = "min-height:4em", teksti)
     })
   }
 
@@ -230,11 +262,21 @@ server <- function(input, output, session) {
 
   output$lahteet <- renderTable({
     s <- unique(DATA[, c("aihe", "sarja", "yksikko", "lahde", "menetelma")])
-    viim <- tapply(DATA$neljannes[!is.na(DATA$muutos)],
-                   paste(DATA$aihe, DATA$sarja)[!is.na(DATA$muutos)], max)
+    tot <- !is.na(DATA$muutos) & !DATA$ennuste
+    viim <- tapply(DATA$neljannes[tot], paste(DATA$aihe, DATA$sarja)[tot], max)
     s$viimeisin <- viim[paste(s$aihe, s$sarja)]
-    names(s) <- c("Aihealue", "Sarja", "Yksikkö", "Lähde", "Vertailu", "Viimeisin")
+    names(s) <- c("Aihealue", "Sarja", "Yksikkö", "Lähde", "Vertailu", "Viimeisin toteutunut")
     s
+  }, striped = TRUE, spacing = "s", width = "100%")
+
+  output$oletukset <- renderTable({
+    validate(need(!is.null(OLETUKSET), "Ennusteoletuksia ei löydy."))
+    o <- OLETUKSET[, c("aihe", "sarja_regex", "vuosi", "muutos_pct", "lahde", "julkaistu")]
+    o$sarja_regex <- gsub("\\^|\\$|\\\\", "", o$sarja_regex)
+    o$sarja_regex[o$sarja_regex == "."] <- "kaikki sarjat"
+    o$vuosi <- as.character(o$vuosi)
+    names(o) <- c("Aihealue", "Sarjat", "Vuosi", "Muutos, %", "Lähde", "Julkaistu")
+    o
   }, striped = TRUE, spacing = "s", width = "100%")
 }
 

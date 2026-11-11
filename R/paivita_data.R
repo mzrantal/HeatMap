@@ -176,12 +176,12 @@ RLV <- px_hae("rlv/14m1.px", list(
   contentscode = c("rlv-alkuperainen", "rlv-muutosprosentti")))
 
 message("Haetaan vanhojen osakeasuntojen hinnat ja kaupat (ashi)...")
-# Hintaindeksi: ketjutettu neljännesvuosi-indeksi 2020=100 (pitkä sarja)
+# Hintaindeksi: ketjutettu neljännesvuosi-indeksi 2015=100 (sarja alkaa 2015)
 ASHI_HINTA <- px_hae("ashi/15it.px", list(
   alue_43_20260625 = c("SSS", "pks", "msu"),
   talotyyppi_5_20111209 = c("0", "1", "3"),
   huoneluku_1_20111212 = "00",
-  contentscode = "ashivq_indeksi_2020"))
+  contentscode = "ashivq_indeksi_2015"))
 # Kauppamäärät kiinteistönvälittäjien kautta: 2020-2024 taulusta 13ms,
 # 2025- taulusta 15iq (molemmat KVKL:n välittäjäkaupat)
 ASHI_LKM_VANHA <- px_hae("ashi/13ms.px", list(
@@ -233,14 +233,27 @@ DI$valmistuminen[!is.na(DI$valmistuminen) & DI$valmistuminen == 0] <- NA
 keskeytetty <- grepl("^5\\.", DI$vaihe)
 message(sprintf("  Datakeskushankkeita %d, joista valmistumisvuosi %d, keskeytettyjä %d",
                 nrow(DI), sum(!is.na(DI$valmistuminen)), sum(keskeytetty)))
-DI <- DI[!is.na(DI$valmistuminen) & !keskeytetty, ]
-DI_NELJ <- neljannekset_valilla(paste0(min(DI$valmistuminen), "Q1"),
-                                paste0(max(DI$valmistuminen), "Q4"))
+DI <- DI[!keskeytetty, ]
+
+# Hankkeille, joilta valmistumisvuosi puuttuu, arvioidaan vuosi uutisoinnin
+# vuodesta ja hankevaiheesta (esiselvitys +4, suunnittelu +3,
+# investointipäätös +2, käynnistys +1 vuotta). Käytetään vain erillisellä
+# ennusterivillä.
+VIIVE <- c("0" = 4, "1" = 3, "2" = 2, "3" = 1)
+viive <- VIIVE[substr(DI$vaihe, 1, 1)]
+viive[is.na(viive)] <- 3
+DI$valmistuminen_arvio <- ifelse(is.na(DI$valmistuminen),
+                                 as.integer(format(DI$pvm, "%Y")) + viive,
+                                 DI$valmistuminen)
+vuodet <- c(DI$valmistuminen, DI$valmistuminen_arvio)
+DI_NELJ <- neljannekset_valilla(paste0(min(vuodet, na.rm = TRUE), "Q1"),
+                                paste0(max(vuodet, na.rm = TRUE), "Q4"))
 
 # Valmistumisvuoden summa jaetaan tasan vuoden neljälle neljännekselle.
 # Vuodet, joilta ei ole hankkeita, saavat arvon 0.
-valmistumissarja <- function(rivit, arvo) {
-  vuosisumma <- tapply(arvo[rivit], DI$valmistuminen[rivit], sum, na.rm = TRUE)
+valmistumissarja <- function(rivit, arvo, vuosi_hanke = DI$valmistuminen) {
+  rivit <- rivit & !is.na(vuosi_hanke)
+  vuosisumma <- tapply(arvo[rivit], vuosi_hanke[rivit], sum, na.rm = TRUE)
   vuosi <- substr(DI_NELJ, 1, 4)
   df <- data.frame(neljannes = DI_NELJ,
                    arvo = ifelse(vuosi %in% names(vuosisumma), vuosisumma[vuosi] / 4, 0))
@@ -292,15 +305,15 @@ rivit <- list(
   r("Käytettyjen asuntojen kauppa", "Kaupat (varainsiirtovero): koko maa", ashi_lkm_vvero(),
     paste(TK, "ashi/15iq"), "kpl"),
   r("Käytettyjen asuntojen kauppa", "Hintaindeksi: koko maa", ashi_hinta("SSS", "0"),
-    paste(TK, "ashi/15it"), "indeksi 2020=100"),
+    paste(TK, "ashi/15it"), "indeksi 2015=100"),
   r("Käytettyjen asuntojen kauppa", "Hintaindeksi: pääkaupunkiseutu", ashi_hinta("pks", "0"),
-    paste(TK, "ashi/15it"), "indeksi 2020=100"),
+    paste(TK, "ashi/15it"), "indeksi 2015=100"),
   r("Käytettyjen asuntojen kauppa", "Hintaindeksi: muu Suomi", ashi_hinta("msu", "0"),
-    paste(TK, "ashi/15it"), "indeksi 2020=100"),
+    paste(TK, "ashi/15it"), "indeksi 2015=100"),
   r("Käytettyjen asuntojen kauppa", "Hintaindeksi: kerrostalot", ashi_hinta("SSS", "3"),
-    paste(TK, "ashi/15it"), "indeksi 2020=100"),
+    paste(TK, "ashi/15it"), "indeksi 2015=100"),
   r("Käytettyjen asuntojen kauppa", "Hintaindeksi: rivitalot", ashi_hinta("SSS", "1"),
-    paste(TK, "ashi/15it"), "indeksi 2020=100"),
+    paste(TK, "ashi/15it"), "indeksi 2015=100"),
 
   # --- Muu talorakentaminen
   r("Muu talorakentaminen", "Rakennusluvat, muut kuin asuinrakennukset", raku_sarja(RAKU, "1", "02T19", "raku-tilavuusToimenpide"),
@@ -337,6 +350,10 @@ rivit <- list(
     "Uutisointi (Dataikkuna)", "kpl (vuoden hankkeet / 4)", VALM),
   r("Datakeskusten rakentaminen", "Investointipäätös tai käynnistys: investoinnit", valmistumissarja(etenevat, summa),
     "Uutisointi (Dataikkuna)", "M€", VALM),
+  r("Datakeskusten rakentaminen", "Investoinnit, myös arvioidut valmistumisvuodet",
+    valmistumissarja(kaikki, summa, DI$valmistuminen_arvio),
+    "Uutisointi (Dataikkuna)", "M€",
+    "Kuten yllä; puuttuva valmistumisvuosi arvioitu hankevaiheesta (esiselvitys +4, suunnittelu +3, päätös +2, käynnistys +1 v.)"),
   r("Datakeskusten rakentaminen", "Aloitukset: teollisuus- ja varastorakennukset", raku_sarja(RAKU, "2", "09T12", "raku-tilavuusToimenpide"),
     paste(TK, "raku/156f (välillinen mittari)"), "m³"),
 
@@ -394,12 +411,31 @@ tkke <- tryCatch({
 rivit <- c(rivit, list(tkke))
 
 data <- do.call(rbind, rivit[!vapply(rivit, is.null, logical(1))])
+
+# -----------------------------------------------------------------------------
+# 4. Ennusteet vuoden 2029 loppuun
+# -----------------------------------------------------------------------------
+message("Lasketaan ennusteet...")
+sarjajarjestys <- unique(paste(data$aihe, data$sarja))
+source("R/ennuste.R", encoding = "UTF-8")
+uutisrivit <- data$lahde == "Uutisointi (Dataikkuna)"
+vuositiedot <- unique(data$sarja[grepl("vuositieto", data$sarja)])
+data <- lisaa_ennusteet(data, lue_oletukset(),
+                        ohita = c(unique(data$sarja[uutisrivit]), vuositiedot))
+# Datakeskusten hankeputki: päättymättömät neljännekset ovat ennustetta
+tama_q <- paste0(format(Sys.Date(), "%Y"), "Q", (as.integer(format(Sys.Date(), "%m")) - 1) %/% 3 + 1)
+putki <- data$lahde == "Uutisointi (Dataikkuna)" & data$neljannes >= tama_q
+data$ennuste[putki] <- TRUE
+data$ennusteen_lahde[putki] <- "Uutisoitu hankeputki (Dataikkuna), ilmoitetut valmistumisvuodet"
+data <- data[data$neljannes <= ENNUSTE_LOPPU, ]
+data <- data[order(match(paste(data$aihe, data$sarja), sarjajarjestys), data$neljannes), ]
 data$jarjestys <- ave(seq_len(nrow(data)), data$aihe, FUN = function(i) match(data$sarja[i], unique(data$sarja[i])))
 data$arvo <- signif(data$arvo, 6)
 data$muutos <- round(data$muutos, 1)
 
 dir.create(ULOS, showWarnings = FALSE, recursive = TRUE)
 write.csv(data, file.path(ULOS, "heatmap.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+file.copy("data/ennusteoletukset.csv", file.path(ULOS, "ennusteoletukset.csv"), overwrite = TRUE)
 writeLines(format(Sys.time(), "%Y-%m-%d %H:%M %Z", tz = "Europe/Helsinki"),
            file.path(ULOS, "paivitetty.txt"))
 

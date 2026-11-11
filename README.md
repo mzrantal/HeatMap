@@ -17,10 +17,37 @@ Sininen tarkoittaa kasvua ja punainen laskua.
 Sovelluksen *Lähteet ja menetelmät* -välilehdellä näkyy jokaisen sarjan yksikkö,
 lähdetaulukko, vertailutapa ja viimeisin neljännes.
 
+## Ennusteet vuoden 2029 loppuun
+
+Toteutuneiden tietojen jälkeen jokaiselle sarjalle lasketaan ennuste vuoden 2029
+loppuun (`R/ennuste.R`). Sovelluksessa ennustesolut näkyvät vaaleampina ja
+katkoviivalla reunustettuina, ja ennusteet voi piilottaa.
+
+1. **Julkaistut ennusteet** (`data/ennusteoletukset.csv`): Taulukossa on vuosimuutokset,
+   jotka on poimittu uutisoinnista ja ennustelaitosten julkaisuista. Lähteinä ovat
+   VM:n taloudellinen katsaus syksyllä 2026 (investoinnit), RT:n suhdannekatsaus
+   lokakuussa 2026 (asunto- ja infrarakentaminen, asuntoaloitukset) ja
+   Sp-Kodin ja Säästöpankkiryhmän asuntokauppaennuste syyskuussa 2026 (kauppamäärät
+   ja hinnat). Vuoden jäljellä olevat neljännekset asetetaan niin, että koko vuoden
+   muutos vastaa ennustetta. Taulukkoa voi päivittää käsin, kun uusia ennusteita
+   julkaistaan. Sarake `sarja_regex` kertoo, mihin sarjoihin rivi kohdistuu.
+2. **Tilastollinen jatke**: Vuosina, joille ei ole julkaistua ennustetta, vuosimuutos
+   palautuu edellisestä neljänneksestä kohti sarjan pitkän aikavälin mediaania
+   (vuodesta 2015 alkaen, rajattu välille −3…+5 %). Poikkeamasta säilyy 80 %
+   neljänneksestä toiseen.
+3. **Datakeskukset**: Ennuste on uutisoitu hankeputki ilmoitettujen valmistumisvuosien
+   mukaan. Erillisellä rivillä on mukana myös hankkeet, joilta valmistumisvuosi puuttuu.
+   Niille vuosi arvioidaan hankevaiheesta: esiselvitys +4, suunnittelu +3,
+   investointipäätös +2 ja käynnistys +1 vuotta uutisoinnista.
+
+Kaikki sarjat katkaistaan neljännekseen 2029Q4.
+
 ## Rakenne
 
 ```
 R/paivita_data.R      hakee aineistot ja laskee vuosimuutokset -> app/data/heatmap.csv
+R/ennuste.R           ennusteet vuoden 2029 loppuun
+data/ennusteoletukset.csv  julkaistut vuosiennusteet ja niiden lähteet
 app/app.R             Shiny-sovellus (shiny, bslib, ggplot2)
 app/data/             sovelluksen käyttämä aineisto (päivittyy automaattisesti)
 data/Dataikkuna*.xlsx datakeskusten uutisaineisto
