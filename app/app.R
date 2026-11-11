@@ -31,7 +31,7 @@ YLEISKUVA <- list(
   c("Käytettyjen asuntojen kauppa", "Hintaindeksi: koko maa"),
   c("Muu talorakentaminen", "Aloitukset, muut kuin asuinrakennukset"),
   c("Maa- ja vesirakentaminen", "Maa- ja vesirakennusinvestoinnit"),
-  c("Datakeskusten rakentaminen", "Uutisoitu investointisumma"),
+  c("Datakeskusten rakentaminen", "Valmistuvien hankkeiden investoinnit"),
   c("T&K-investoinnit", "Henkiset omaisuustuotteet (T&K, ohjelmistot)"),
   c("Investoinnit yhteensä", "Kiinteän pääoman bruttomuodostus")
 )
@@ -41,7 +41,7 @@ KUVAUKSET <- list(
   "Käytettyjen asuntojen kauppa" = "Vanhojen osakeasuntojen kauppamäärät (kiinteistönvälittäjät ja varainsiirtoverotiedot) sekä hintaindeksi alueittain ja talotyypeittäin.",
   "Muu talorakentaminen" = "Muiden kuin asuinrakennusten rakennusluvat, aloitukset ja valmistumiset tilavuutena (m³), uudisrakentamisen volyymi-indeksi ja investoinnit muihin talorakennuksiin.",
   "Maa- ja vesirakentaminen" = "Maa- ja vesirakennusinvestointien volyymi (kansantalouden tilinpito) sekä maa- ja vesirakentamisen toimialan (TOL 42) liikevaihto ja myynnin määrä.",
-  "Datakeskusten rakentaminen" = "Uutisoidut datakeskushankkeet (Dataikkuna-aineisto, liukuvat neljän neljänneksen summat). Virallista datakeskustilastoa ei ole, joten mukana on välillisenä mittarina teollisuus- ja varastorakennusten aloitukset.",
+  "Datakeskusten rakentaminen" = "Uutisoidut datakeskushankkeet (Dataikkuna-aineisto) valmistumisvuoden mukaan: hankkeen investointi ja kapasiteetti jaetaan tasan valmistumisvuoden neljälle neljännekselle, joten saman vuoden neljänneksillä on sama muutos. Mukana ovat hankkeet, joille on ilmoitettu valmistumisvuosi (ei keskeytettyjä). Tulevat vuodet kuvaavat ilmoitettua hankeputkea. Välillisenä mittarina mukana teollisuus- ja varastorakennusten aloitukset (Tilastokeskus).",
   "T&K-investoinnit" = "Neljännesvuosittain: investoinnit henkisiin omaisuustuotteisiin (pääosin T&K ja ohjelmistot). Vuosittain: T&K-menot yhteensä, näytetään vuoden neljännellä neljänneksellä.",
   "Investoinnit yhteensä" = "Kiinteän pääoman bruttomuodostus ja sen osat, volyymin muutos vuoden takaisesta (alkuperäinen sarja, kansantalouden tilinpito)."
 )
@@ -88,7 +88,8 @@ heatmap_kuva <- function(d, raja, nayta_arvot) {
       plot.margin = margin(4, 8, 4, 4)
     )
   if (nayta_arvot) {
-    p <- p + geom_text(aes(label = teksti, colour = tumma), size = 3, show.legend = FALSE) +
+    koko <- if (length(nelj) > 32) 2.2 else 3   # pitkillä aikaväleillä pienempi teksti
+    p <- p + geom_text(aes(label = teksti, colour = tumma), size = koko, show.legend = FALSE) +
       scale_colour_manual(values = c(`FALSE` = "#0b0b0b", `TRUE` = "white"))
   }
   p
@@ -126,8 +127,9 @@ paneelit <- c(
       "Viimeisimmät tiedot ovat ennakollisia ja voivat tarkentua."),
     p(class = "small text-body-secondary",
       "Datakeskusten uutisaineisto on Dataikkuna-hankeluettelosta (uutisointien perusteella koottu). ",
-      "Hanke kirjataan neljännekselle uutisoinnin päivämäärän mukaan. Koska uutisointi on epätasaista, ",
-      "vertailu tehdään liukuvista neljän neljänneksen summista. Puuttuvat summat (0 M€) eivät ole mukana summissa.")
+      "Hanke kohdistetaan ilmoitettuun valmistumisvuoteen, ja sen investointi ja kapasiteetti jaetaan tasan vuoden ",
+      "neljälle neljännekselle. Hankkeet ilman valmistumisvuotta ja keskeytetyt hankkeet eivät ole mukana. ",
+      "Puuttuvat summat (0 M€) eivät ole mukana summissa.")
   )))
 )
 
@@ -140,7 +142,7 @@ ui <- page_sidebar(
     width = 280,
     sliderInput("vuodet", "Aikaväli", min = as.integer(substr(min(DATA$neljannes), 1, 4)),
                 max = as.integer(substr(max(DATA$neljannes), 1, 4)),
-                value = c(max(as.integer(substr(max(DATA$neljannes), 1, 4)) - 5,
+                value = c(max(as.integer(format(Sys.Date(), "%Y")) - 5,
                               as.integer(substr(min(DATA$neljannes), 1, 4))),
                           as.integer(substr(max(DATA$neljannes), 1, 4))),
                 step = 1, sep = ""),
@@ -173,7 +175,7 @@ server <- function(input, output, session) {
     if (id == "yleis") {
       osat <- lapply(YLEISKUVA, function(x) {
         o <- d[d$aihe == x[1] & d$sarja == x[2], ]
-        if (nrow(o)) o$sarja <- if (x[2] %in% c("Aloitetut asunnot", "Uutisoitu investointisumma"))
+        if (nrow(o)) o$sarja <- if (x[2] %in% c("Aloitetut asunnot", "Valmistuvien hankkeiden investoinnit"))
           paste0(x[1], ": ", tolower(x[2])) else x[2]
         o
       })

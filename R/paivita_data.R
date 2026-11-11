@@ -88,16 +88,7 @@ vuosimuutos <- function(df) {
   m
 }
 
-# Liukuva 4 neljänneksen summa (vaatii kaikki neljä neljännestä)
-liukuva4 <- function(df) {
-  vapply(df$neljannes, function(q) {
-    qs <- neljannes_siirto(q, 0:3)
-    x <- df$arvo[match(qs, df$neljannes)]
-    if (anyNA(x)) NA_real_ else sum(x)
-  }, numeric(1))
-}
-
-# Kaikki neljännekset välillä a..b (täydentää puuttuvat, esim. nollat uutisaineistossa)
+# Kaikki neljännekset välillä a..b
 neljannekset_valilla <- function(a, b) {
   va <- as.integer(substr(a, 1, 4)) * 4 + as.integer(substr(a, 6, 6)) - 1
   vb <- as.integer(substr(b, 1, 4)) * 4 + as.integer(substr(b, 6, 6)) - 1
@@ -233,23 +224,28 @@ DI <- as.data.frame(read_excel(dataikkuna[1], sheet = 1))
 # Pysyvät työpaikat, Vaihe, Valmistuminen, Kapasiteetti (MW), Linkki, Info, ID
 names(DI)[1:11] <- c("pvm", "teema", "investoija", "paikka", "summa", "arvio",
                      "tyopaikat", "pysyvat", "vaihe", "valmistuminen", "mw")
-DI <- DI[DI$teema == "Datakeskus" & !is.na(DI$pvm), ]
-DI$neljannes <- paste0(format(DI$pvm, "%Y"), "Q",
-                       (as.integer(format(DI$pvm, "%m")) - 1) %/% 3 + 1)
-# Mukaan vain päättyneet neljännekset (kesken oleva neljännes vääristäisi vertailua)
-tama_q <- paste0(format(Sys.Date(), "%Y"), "Q", (as.integer(format(Sys.Date(), "%m")) - 1) %/% 3 + 1)
-DI_NELJ <- neljannekset_valilla(min(DI$neljannes), neljannes_siirto(tama_q, 1))
+# Hankkeet kohdistetaan valmistumisvuoteen (ei uutisoinnin päivämäärään).
+# Mukaan otetaan hankkeet, joille on ilmoitettu valmistumisvuosi; keskeytetyt
+# hankkeet jätetään pois.
+DI <- DI[DI$teema == "Datakeskus", ]
+DI$valmistuminen <- suppressWarnings(as.integer(DI$valmistuminen))
+DI$valmistuminen[!is.na(DI$valmistuminen) & DI$valmistuminen == 0] <- NA
+keskeytetty <- grepl("^5\\.", DI$vaihe)
+message(sprintf("  Datakeskushankkeita %d, joista valmistumisvuosi %d, keskeytettyjä %d",
+                nrow(DI), sum(!is.na(DI$valmistuminen)), sum(keskeytetty)))
+DI <- DI[!is.na(DI$valmistuminen) & !keskeytetty, ]
+DI_NELJ <- neljannekset_valilla(paste0(min(DI$valmistuminen), "Q1"),
+                                paste0(max(DI$valmistuminen), "Q4"))
 
-# Uutisaineiston sarja: neljännessumma, puuttuvat neljännekset = 0.
-# Uutisointi on epätasaista, joten vuosimuutos lasketaan liukuvista
-# neljän neljänneksen summista.
-uutissarja <- function(rivit, arvo) {
-  s <- tapply(arvo[rivit], DI$neljannes[rivit], sum, na.rm = TRUE)
-  df <- data.frame(neljannes = DI_NELJ, arvo = 0)
-  s <- s[names(s) %in% df$neljannes]
-  df$arvo[match(names(s), df$neljannes)] <- as.numeric(s)
-  df$arvo <- liukuva4(df)
-  tasosta(df[!is.na(df$arvo), ])
+# Valmistumisvuoden summa jaetaan tasan vuoden neljälle neljännekselle.
+# Vuodet, joilta ei ole hankkeita, saavat arvon 0.
+valmistumissarja <- function(rivit, arvo) {
+  vuosisumma <- tapply(arvo[rivit], DI$valmistuminen[rivit], sum, na.rm = TRUE)
+  vuosi <- substr(DI_NELJ, 1, 4)
+  df <- data.frame(neljannes = DI_NELJ,
+                   arvo = ifelse(vuosi %in% names(vuosisumma), vuosisumma[vuosi] / 4, 0))
+  df$arvo[is.na(df$arvo)] <- 0
+  tasosta(df)
 }
 kaikki <- rep(TRUE, nrow(DI))
 etenevat <- grepl("^(2|3)\\.", DI$vaihe)   # investointipäätös tai käynnistys
@@ -266,7 +262,7 @@ r <- function(aihe, sarja, df, lahde, yksikko, menetelma = "Neljännes / sama ne
   data.frame(aihe = aihe, sarja = sarja, df, yksikko = yksikko,
              lahde = lahde, menetelma = menetelma)
 }
-LIUKUVA <- "Liukuva 4 neljänneksen summa / sama vuotta aiemmin"
+VALM <- "Valmistumisvuoden summa jaettu tasan neljänneksille / sama neljännes vuotta aiemmin"
 VOL <- "Volyymin muutos, alkuperäinen sarja (Tilastokeskus)"
 
 rivit <- list(
@@ -333,14 +329,14 @@ rivit <- list(
     paste(TK, "rlv/14m1"), "indeksi 2021=100", "Alkuperäisen sarjan vuosimuutos (Tilastokeskus)"),
 
   # --- Datakeskusten rakentaminen
-  r("Datakeskusten rakentaminen", "Uutisoidut hankkeet", uutissarja(kaikki, rep(1, nrow(DI))),
-    "Uutisointi (Dataikkuna)", "kpl", LIUKUVA),
-  r("Datakeskusten rakentaminen", "Uutisoitu investointisumma", uutissarja(kaikki, summa),
-    "Uutisointi (Dataikkuna)", "M€", LIUKUVA),
-  r("Datakeskusten rakentaminen", "Uutisoitu kapasiteetti", uutissarja(kaikki, mw),
-    "Uutisointi (Dataikkuna)", "MW", LIUKUVA),
-  r("Datakeskusten rakentaminen", "Investointipäätös tai käynnistys: summa", uutissarja(etenevat, summa),
-    "Uutisointi (Dataikkuna)", "M€", LIUKUVA),
+  r("Datakeskusten rakentaminen", "Valmistuvien hankkeiden investoinnit", valmistumissarja(kaikki, summa),
+    "Uutisointi (Dataikkuna)", "M€", VALM),
+  r("Datakeskusten rakentaminen", "Valmistuva kapasiteetti", valmistumissarja(kaikki, mw),
+    "Uutisointi (Dataikkuna)", "MW", VALM),
+  r("Datakeskusten rakentaminen", "Valmistuvat hankkeet", valmistumissarja(kaikki, rep(1, nrow(DI))),
+    "Uutisointi (Dataikkuna)", "kpl (vuoden hankkeet / 4)", VALM),
+  r("Datakeskusten rakentaminen", "Investointipäätös tai käynnistys: investoinnit", valmistumissarja(etenevat, summa),
+    "Uutisointi (Dataikkuna)", "M€", VALM),
   r("Datakeskusten rakentaminen", "Aloitukset: teollisuus- ja varastorakennukset", raku_sarja(RAKU, "2", "09T12", "raku-tilavuusToimenpide"),
     paste(TK, "raku/156f (välillinen mittari)"), "m³"),
 
