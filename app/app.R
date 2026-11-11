@@ -34,7 +34,7 @@ YLEISKUVA <- list(
   c("Käytettyjen asuntojen kauppa", "Hintaindeksi: koko maa"),
   c("Muu talorakentaminen", "Aloitukset, muut kuin asuinrakennukset"),
   c("Maa- ja vesirakentaminen", "Maa- ja vesirakennusinvestoinnit"),
-  c("Datakeskusten rakentaminen", "Valmistuvien hankkeiden investoinnit"),
+  c("Datakeskusten rakentaminen", "Rakennusaikaiset investoinnit"),
   c("T&K-investoinnit", "Henkiset omaisuustuotteet (T&K, ohjelmistot)"),
   c("Investoinnit yhteensä", "Kiinteän pääoman bruttomuodostus")
 )
@@ -44,7 +44,7 @@ KUVAUKSET <- list(
   "Käytettyjen asuntojen kauppa" = "Vanhojen osakeasuntojen kauppamäärät (kiinteistönvälittäjät ja varainsiirtoverotiedot) sekä hintaindeksi alueittain ja talotyypeittäin.",
   "Muu talorakentaminen" = "Muiden kuin asuinrakennusten rakennusluvat, aloitukset ja valmistumiset tilavuutena (m³), uudisrakentamisen volyymi-indeksi ja investoinnit muihin talorakennuksiin.",
   "Maa- ja vesirakentaminen" = "Maa- ja vesirakennusinvestointien volyymi (kansantalouden tilinpito) sekä maa- ja vesirakentamisen toimialan (TOL 42) liikevaihto ja myynnin määrä.",
-  "Datakeskusten rakentaminen" = "Uutisoidut datakeskushankkeet (Dataikkuna-aineisto) valmistumisvuoden mukaan: hankkeen investointi ja kapasiteetti jaetaan tasan valmistumisvuoden neljälle neljännekselle, joten saman vuoden neljänneksillä on sama muutos. Mukana ovat hankkeet, joille on ilmoitettu valmistumisvuosi (ei keskeytettyjä). Tulevat vuodet kuvaavat ilmoitettua hankeputkea. Välillisenä mittarina mukana teollisuus- ja varastorakennusten aloitukset (Tilastokeskus).",
+  "Datakeskusten rakentaminen" = "Uutisoidut datakeskushankkeet (Dataikkuna-aineisto) rakennusajan mukaan. Hankkeen investointi jaetaan tasan rakennusajan neljänneksille. Rakentamisen alku ja valmistumisneljännes poimitaan uutisteksteistä (esim. \"rakentaminen alkaa 2027 ensimmäisellä vuosipuoliskolla\", \"valmistuu syksyllä 2026\"); muuten valmistuminen on valmistumisvuoden Q3 ja rakennusaika 6 neljännestä (alle 500 M€) tai 8 neljännestä. Välillisenä mittarina teollisuus- ja varastorakennusten aloitukset (Tilastokeskus).",
   "T&K-investoinnit" = "Neljännesvuosittain: investoinnit henkisiin omaisuustuotteisiin (pääosin T&K ja ohjelmistot). Vuosittain: T&K-menot yhteensä, näytetään vuoden neljännellä neljänneksellä.",
   "Investoinnit yhteensä" = "Kiinteän pääoman bruttomuodostus ja sen osat, volyymin muutos vuoden takaisesta (alkuperäinen sarja, kansantalouden tilinpito)."
 )
@@ -153,8 +153,10 @@ paneelit <- c(
     tableOutput("oletukset"),
     p(class = "small text-body-secondary",
       "Datakeskusten uutisaineisto on Dataikkuna-hankeluettelosta (uutisointien perusteella koottu). ",
-      "Hanke kohdistetaan ilmoitettuun valmistumisvuoteen, ja sen investointi ja kapasiteetti jaetaan tasan vuoden ",
-      "neljälle neljännekselle. Hankkeet ilman valmistumisvuotta ja keskeytetyt hankkeet eivät ole mukana. ",
+      "Hankkeen rakennusaika päätellään uutisteksteistä (rakentamisen alku, valmistumisen neljännes) tai oletuksista, ",
+      "ja investointi jaetaan tasan rakennusajan neljänneksille. Kapasiteetti ja hankemäärä ovat rakenteilla olevien ",
+      "hankkeiden kanta. Hankkeet ilman valmistumisvuotta ovat mukana vain erillisellä arviorivillä; keskeytetyt eivät ole mukana. ",
+      "Hankekohtainen ajoitus: data/datakeskushankkeiden_ajoitus.csv. ",
       "Puuttuvat summat (0 M€) eivät ole mukana summissa.")
   )))
 )
@@ -204,7 +206,7 @@ server <- function(input, output, session) {
     if (id == "yleis") {
       osat <- lapply(YLEISKUVA, function(x) {
         o <- d[d$aihe == x[1] & d$sarja == x[2], ]
-        if (nrow(o)) o$sarja <- if (x[2] %in% c("Aloitetut asunnot", "Valmistuvien hankkeiden investoinnit"))
+        if (nrow(o)) o$sarja <- if (x[2] %in% c("Aloitetut asunnot", "Rakennusaikaiset investoinnit"))
           paste0(x[1], ": ", tolower(x[2])) else x[2]
         o
       })

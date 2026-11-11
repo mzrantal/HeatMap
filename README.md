@@ -10,7 +10,7 @@ Sininen tarkoittaa kasvua ja punainen laskua.
 | Käytettyjen asuntojen kauppa | kauppamäärät (välittäjät: koko maa, PKS, muu Suomi; varainsiirtovero); hintaindeksi alueittain ja talotyypeittäin | Tilastokeskus ashi/13ms, 15iq, 15it |
 | Muu talorakentaminen | muiden kuin asuinrakennusten luvat, aloitukset (rakennusluokittain) ja valmistumiset, m³; volyymi-indeksi; investoinnit | Tilastokeskus raku/156f, raku/156g, ntp/132h |
 | Maa- ja vesirakentaminen | maa- ja vesirakennusinvestoinnit; TOL 42 liikevaihto ja myynnin määrä | Tilastokeskus ntp/132h, rlv/14m1 |
-| Datakeskusten rakentaminen | valmistumisvuoden mukaan: investoinnit (M€), kapasiteetti (MW), hankkeet (kpl), investointipäätöksen tai käynnistyksen saaneiden investoinnit; teollisuus- ja varastorakennusten aloitukset (välillinen mittari) | Uutisointi (Dataikkuna), Tilastokeskus raku/156f |
+| Datakeskusten rakentaminen | rakennusajan mukaan: rakennusaikaiset investoinnit (M€), rakenteilla oleva kapasiteetti (MW) ja hankkeet (kpl), investointipäätöksen tai käynnistyksen saaneiden investoinnit; teollisuus- ja varastorakennusten aloitukset (välillinen mittari) | Uutisointi (Dataikkuna), Tilastokeskus raku/156f |
 | T&K-investoinnit | investoinnit henkisiin omaisuustuotteisiin (neljännesvuosittain); T&K-menot (vuosittain, näkyy Q4:llä) | Tilastokeskus ntp/132h, tkke/13ri |
 | Investoinnit yhteensä | kiinteän pääoman bruttomuodostus; yksityiset ja julkiset investoinnit; investointilajit | Tilastokeskus ntp/132h |
 
@@ -79,13 +79,24 @@ kuin Dataikkunan viennissä: Päivämäärä, Teema, Investoija, Paikka, Summa (
 Vaihe, Valmistuminen, Kapasiteetti (MW). Mukaan otetaan rivit, joilla Teema on
 `Datakeskus`.
 
-Hanke kohdistetaan Dataikkunan Valmistuminen-sarakkeen vuoteen, ei uutisoinnin
-päivämäärään. Hankkeen investointi, kapasiteetti ja lukumäärä jaetaan tasan
-valmistumisvuoden neljälle neljännekselle. Siksi saman vuoden neljänneksillä on sama
-muutos vuoden takaisesta, ja tulevat vuodet kuvaavat ilmoitettua hankeputkea.
-Hankkeet, joilta valmistumisvuosi puuttuu, ja keskeytetyt hankkeet jätetään pois.
-Ajon tulosteessa näkyy, montako hanketta on mukana. Prosenttimuutokset ovat suuria,
-kun lähtötaso on pieni.
+Hankkeet kohdistetaan rakennusajalleen (`R/datakeskus_ajoitus.R`):
+
+- Valmistumisvuosi otetaan Dataikkunan Valmistuminen-sarakkeesta.
+- Valmistumisneljännes ja rakentamisen alku poimitaan uutistekstistä (Info-sarake),
+  esim. "valmistuu syksyllä 2026" tai "rakennustyöt on tarkoitus aloittaa vuoden
+  2027 ensimmäisellä vuosipuoliskolla". Suhteelliset ilmaukset (esim. "ensi vuonna")
+  lasketaan uutisoinnin päivämäärästä.
+- Jos tietoa ei ole, valmistuminen on vuoden Q3 ja rakennusaika 6 neljännestä
+  (alle 500 M€) tai 8 neljännestä (vähintään 500 M€). Käynnistyneeksi
+  uutisoidun hankkeen rakentaminen alkaa viimeistään uutisoinnin neljänneksellä.
+- Investointi jaetaan tasan rakennusajan neljänneksille. Kapasiteetti ja
+  hankemäärä ovat rakenteilla olevien hankkeiden kanta.
+- Hankkeet, joilta valmistumisvuosi puuttuu, ovat mukana vain erillisellä
+  arviorivillä. Keskeytetyt hankkeet jätetään pois.
+
+Jokaisen hankkeen ajoitus ja sen peruste tallennetaan tiedostoon
+`app/data/datakeskushankkeiden_ajoitus.csv`. Ajoitusta kannattaa tarkistaa
+sieltä. Prosenttimuutokset ovat suuria, kun lähtötaso on pieni.
 
 ## Paikallinen ajo
 

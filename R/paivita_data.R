@@ -222,10 +222,11 @@ DI <- as.data.frame(read_excel(dataikkuna[1], sheet = 1))
 # Sarakkeet nimetään järjestyksen mukaan (Dataikkunan vientimuoto):
 # Päivämäärä, Teema, Investoija, Paikka, Summa (M€), Onko arvio?, Työpaikat,
 # Pysyvät työpaikat, Vaihe, Valmistuminen, Kapasiteetti (MW), Linkki, Info, ID
-names(DI)[1:11] <- c("pvm", "teema", "investoija", "paikka", "summa", "arvio",
-                     "tyopaikat", "pysyvat", "vaihe", "valmistuminen", "mw")
-# Hankkeet kohdistetaan valmistumisvuoteen (ei uutisoinnin päivämäärään).
-# Mukaan otetaan hankkeet, joille on ilmoitettu valmistumisvuosi; keskeytetyt
+names(DI)[1:13] <- c("pvm", "teema", "investoija", "paikka", "summa", "arvio",
+                     "tyopaikat", "pysyvat", "vaihe", "valmistuminen", "mw", "linkki", "info")
+# Hankkeet kohdistetaan rakennusajalleen (ei uutisoinnin päivämäärään):
+# valmistumisvuosi Dataikkunasta, rakennusajan alku ja valmistumisneljännes
+# uutisteksteistä tai oletuksista (R/datakeskus_ajoitus.R). Keskeytetyt
 # hankkeet jätetään pois.
 DI <- DI[DI$teema == "Datakeskus", ]
 DI$valmistuminen <- suppressWarnings(as.integer(DI$valmistuminen))
@@ -245,20 +246,31 @@ viive[is.na(viive)] <- 3
 DI$valmistuminen_arvio <- ifelse(is.na(DI$valmistuminen),
                                  as.integer(format(DI$pvm, "%Y")) + viive,
                                  DI$valmistuminen)
-vuodet <- c(DI$valmistuminen, DI$valmistuminen_arvio)
-DI_NELJ <- neljannekset_valilla(paste0(min(vuodet, na.rm = TRUE), "Q1"),
-                                paste0(max(vuodet, na.rm = TRUE), "Q4"))
+source("R/datakeskus_ajoitus.R", encoding = "UTF-8")
+DI$summa_num <- as.numeric(DI$summa)
+AJOITUS <- hankkeiden_ajoitus(DI, DI$valmistuminen)
+AJOITUS_ARVIO <- hankkeiden_ajoitus(DI, DI$valmistuminen_arvio)
+message(sprintf("  Ajoitus uutistekstistä %d hankkeelle, oletuksilla %d",
+                sum(!is.na(AJOITUS$ajoitus) & AJOITUS$ajoitus != "oletukset"),
+                sum(AJOITUS$ajoitus == "oletukset", na.rm = TRUE)))
+i_vali <- range(c(AJOITUS$alku, AJOITUS$loppu, AJOITUS_ARVIO$alku, AJOITUS_ARVIO$loppu), na.rm = TRUE)
+DI_NELJ <- neljannekset_valilla(numero_neljannes(i_vali[1]), numero_neljannes(i_vali[2]))
 
-# Valmistumisvuoden summa jaetaan tasan vuoden neljälle neljännekselle.
-# Vuodet, joilta ei ole hankkeita, saavat arvon 0.
-valmistumissarja <- function(rivit, arvo, vuosi_hanke = DI$valmistuminen) {
-  rivit <- rivit & !is.na(vuosi_hanke)
-  vuosisumma <- tapply(arvo[rivit], vuosi_hanke[rivit], sum, na.rm = TRUE)
-  vuosi <- substr(DI_NELJ, 1, 4)
-  df <- data.frame(neljannes = DI_NELJ,
-                   arvo = ifelse(vuosi %in% names(vuosisumma), vuosisumma[vuosi] / 4, 0))
-  df$arvo[is.na(df$arvo)] <- 0
-  tasosta(df)
+# Hankkeiden ajoitus talteen tarkistusta varten
+ajoitustaulu <- data.frame(
+  investoija = DI$investoija, paikka = DI$paikka, vaihe = DI$vaihe,
+  summa_meur = DI$summa_num, mw = as.numeric(DI$mw),
+  valmistumisvuosi = DI$valmistuminen, valmistumisvuosi_arvio = DI$valmistuminen_arvio,
+  rakentaminen_alkaa = ifelse(is.na(AJOITUS_ARVIO$alku), NA, numero_neljannes(AJOITUS_ARVIO$alku)),
+  valmistuu = ifelse(is.na(AJOITUS_ARVIO$loppu), NA, numero_neljannes(AJOITUS_ARVIO$loppu)),
+  ajoituksen_peruste = ifelse(is.na(DI$valmistuminen),
+                              paste("valmistumisvuosi arvioitu hankevaiheesta;", AJOITUS_ARVIO$ajoitus),
+                              AJOITUS_ARVIO$ajoitus),
+  uutinen = DI$linkki)
+
+# Neljännessarja rakennusajan mukaan
+dk_sarja <- function(rivit, arvo, tapa = "jaa", ajoitus = AJOITUS) {
+  tasosta(rakennusaikasarja(ajoitus, rivit, arvo, DI_NELJ, tapa))
 }
 kaikki <- rep(TRUE, nrow(DI))
 etenevat <- grepl("^(2|3)\\.", DI$vaihe)   # investointipäätös tai käynnistys
@@ -275,7 +287,8 @@ r <- function(aihe, sarja, df, lahde, yksikko, menetelma = "Neljännes / sama ne
   data.frame(aihe = aihe, sarja = sarja, df, yksikko = yksikko,
              lahde = lahde, menetelma = menetelma)
 }
-VALM <- "Valmistumisvuoden summa jaettu tasan neljänneksille / sama neljännes vuotta aiemmin"
+RAKA <- "Investointi jaettu tasan rakennusajan neljänneksille (ajoitus uutisista tai oletuksista); neljännes / sama neljännes vuotta aiemmin"
+RAKA_KANTA <- "Rakennusvaiheessa olevat hankkeet neljänneksellä (ajoitus uutisista tai oletuksista); neljännes / sama neljännes vuotta aiemmin"
 VOL <- "Volyymin muutos, alkuperäinen sarja (Tilastokeskus)"
 
 rivit <- list(
@@ -342,18 +355,18 @@ rivit <- list(
     paste(TK, "rlv/14m1"), "indeksi 2021=100", "Alkuperäisen sarjan vuosimuutos (Tilastokeskus)"),
 
   # --- Datakeskusten rakentaminen
-  r("Datakeskusten rakentaminen", "Valmistuvien hankkeiden investoinnit", valmistumissarja(kaikki, summa),
-    "Uutisointi (Dataikkuna)", "M€", VALM),
-  r("Datakeskusten rakentaminen", "Valmistuva kapasiteetti", valmistumissarja(kaikki, mw),
-    "Uutisointi (Dataikkuna)", "MW", VALM),
-  r("Datakeskusten rakentaminen", "Valmistuvat hankkeet", valmistumissarja(kaikki, rep(1, nrow(DI))),
-    "Uutisointi (Dataikkuna)", "kpl (vuoden hankkeet / 4)", VALM),
-  r("Datakeskusten rakentaminen", "Investointipäätös tai käynnistys: investoinnit", valmistumissarja(etenevat, summa),
-    "Uutisointi (Dataikkuna)", "M€", VALM),
-  r("Datakeskusten rakentaminen", "Investoinnit, myös arvioidut valmistumisvuodet",
-    valmistumissarja(kaikki, summa, DI$valmistuminen_arvio),
-    "Uutisointi (Dataikkuna)", "M€",
-    "Kuten yllä; puuttuva valmistumisvuosi arvioitu hankevaiheesta (esiselvitys +4, suunnittelu +3, päätös +2, käynnistys +1 v.)"),
+  r("Datakeskusten rakentaminen", "Rakennusaikaiset investoinnit", dk_sarja(kaikki, summa),
+    "Uutisointi (Dataikkuna)", "M€ / neljännes", RAKA),
+  r("Datakeskusten rakentaminen", "Rakenteilla oleva kapasiteetti", dk_sarja(kaikki, mw, "kanta"),
+    "Uutisointi (Dataikkuna)", "MW", RAKA_KANTA),
+  r("Datakeskusten rakentaminen", "Rakenteilla olevat hankkeet", dk_sarja(kaikki, rep(1, nrow(DI)), "kanta"),
+    "Uutisointi (Dataikkuna)", "kpl", RAKA_KANTA),
+  r("Datakeskusten rakentaminen", "Investointipäätös tai käynnistys: rakennusaikaiset investoinnit",
+    dk_sarja(etenevat, summa), "Uutisointi (Dataikkuna)", "M€ / neljännes", RAKA),
+  r("Datakeskusten rakentaminen", "Rakennusaikaiset investoinnit, myös arvioidut valmistumisvuodet",
+    dk_sarja(kaikki, summa, ajoitus = AJOITUS_ARVIO),
+    "Uutisointi (Dataikkuna)", "M€ / neljännes",
+    paste(RAKA, "Puuttuva valmistumisvuosi arvioitu hankevaiheesta (esiselvitys +4, suunnittelu +3, päätös +2, käynnistys +1 v.)")),
   r("Datakeskusten rakentaminen", "Aloitukset: teollisuus- ja varastorakennukset", raku_sarja(RAKU, "2", "09T12", "raku-tilavuusToimenpide"),
     paste(TK, "raku/156f (välillinen mittari)"), "m³"),
 
@@ -426,7 +439,7 @@ data <- lisaa_ennusteet(data, lue_oletukset(),
 tama_q <- paste0(format(Sys.Date(), "%Y"), "Q", (as.integer(format(Sys.Date(), "%m")) - 1) %/% 3 + 1)
 putki <- data$lahde == "Uutisointi (Dataikkuna)" & data$neljannes >= tama_q
 data$ennuste[putki] <- TRUE
-data$ennusteen_lahde[putki] <- "Uutisoitu hankeputki (Dataikkuna), ilmoitetut valmistumisvuodet"
+data$ennusteen_lahde[putki] <- "Uutisoitu hankeputki (Dataikkuna), rakennusaika uutisista tai oletuksista"
 data <- data[data$neljannes <= ENNUSTE_LOPPU, ]
 data <- data[order(match(paste(data$aihe, data$sarja), sarjajarjestys), data$neljannes), ]
 data$jarjestys <- ave(seq_len(nrow(data)), data$aihe, FUN = function(i) match(data$sarja[i], unique(data$sarja[i])))
@@ -435,7 +448,9 @@ data$muutos <- round(data$muutos, 1)
 
 dir.create(ULOS, showWarnings = FALSE, recursive = TRUE)
 write.csv(data, file.path(ULOS, "heatmap.csv"), row.names = FALSE, fileEncoding = "UTF-8")
-file.copy("data/ennusteoletukset.csv", file.path(ULOS, "ennusteoletukset.csv"), overwrite = TRUE)
+write.csv(ajoitustaulu[order(ajoitustaulu$rakentaminen_alkaa), ],
+          file.path(ULOS, "datakeskushankkeiden_ajoitus.csv"), row.names = FALSE, fileEncoding = "UTF-8")
+invisible(file.copy("data/ennusteoletukset.csv", file.path(ULOS, "ennusteoletukset.csv"), overwrite = TRUE))
 writeLines(format(Sys.time(), "%Y-%m-%d %H:%M %Z", tz = "Europe/Helsinki"),
            file.path(ULOS, "paivitetty.txt"))
 
