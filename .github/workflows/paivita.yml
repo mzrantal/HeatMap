@@ -1,0 +1,82 @@
+# Päivittää aineiston Tilastokeskuksen rajapinnasta joka aamu, tallentaa
+# muuttuneen aineiston repositorioon ja julkaisee Shiny-sovelluksen
+# (shinylive, R ajetaan selaimessa) GitHub Pagesiin.
+name: Päivitä aineisto ja julkaise
+
+on:
+  schedule:
+    - cron: "17 4 * * *"          # joka päivä klo 04.17 UTC (6.17/7.17 Suomen aikaa)
+  push:
+    branches: [main, claude/modest-fermat-xf2tzn]
+    paths:
+      - "app/**"
+      - "R/**"
+      - "data/**"
+      - ".github/workflows/paivita.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::httr2
+            any::jsonlite
+            any::readxl
+            any::shinylive
+            any::shiny
+            any::bslib
+            any::ggplot2
+
+      - name: Hae aineisto
+        run: Rscript R/paivita_data.R
+
+      - name: Tallenna muuttunut aineisto
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/data/heatmap.csv
+          if git diff --cached --quiet; then
+            echo "Aineisto ei muuttunut."
+          else
+            git add app/data/paivitetty.txt
+            git commit -m "Päivitä aineisto $(date -u +%Y-%m-%d)"
+            git push
+          fi
+
+      - name: Kokoa sivusto
+        run: Rscript -e 'shinylive::export("app", "site")'
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
