@@ -18,6 +18,14 @@ DATA <- DATA[as.integer(substr(DATA$neljannes, 1, 4)) <= ENNUSTE_VIIMEINEN_VUOSI
 OLETUKSET <- if (file.exists("data/ennusteoletukset.csv"))
   read.csv("data/ennusteoletukset.csv", encoding = "UTF-8", stringsAsFactors = FALSE) else NULL
 PAIVITETTY <- if (file.exists("data/paivitetty.txt")) readLines("data/paivitetty.txt", warn = FALSE)[1] else "?"
+# Muoto "2026-11-21 16:35 EET" -> "21.11.2026 klo 16.35"
+PAIVITETTY_FI <- local({
+  m <- regmatches(PAIVITETTY, regexec("^(\\d{4})-(\\d{2})-(\\d{2}) (\\d{2}):(\\d{2})", PAIVITETTY))[[1]]
+  if (length(m) == 6) sprintf("%d.%d.%s klo %s.%s", as.integer(m[4]), as.integer(m[3]), m[2], m[5], m[6])
+  else PAIVITETTY
+})
+# Viimeisin toteutunut (ei ennuste) neljännes koko aineistossa
+VIIMEISIN_HAVAINTO <- max(DATA$neljannes[!DATA$ennuste & !is.na(DATA$muutos)])
 
 AIHEET <- c(
   "Asuntorakentaminen",
@@ -215,6 +223,7 @@ ui <- page_sidebar(
         .card-body { padding: 0.6rem; }
         .main { padding: 0.5rem !important; }
         .taulukko-vieritys table { font-size: 0.8rem; }
+        .paivitysrivi { padding-left: 2.2rem; }   /* sivuvalikon avausnuolen tila */
       }
     ")),
     # Ilmoittaa näytön leveyden palvelimelle (mobiilinäkymä)
@@ -254,8 +263,11 @@ ui <- page_sidebar(
       "Harmaa = ei tietoa. Vaaleat, katkoviivalla reunustetut solut ovat ennustetta."),
     p(class = "small text-body-secondary",
       "Vie hiiri solun päälle tai napauta solua nähdäksesi tarkat luvut."),
-    p(class = "small text-body-secondary", paste("Aineisto päivitetty:", PAIVITETTY))
+    p(class = "small text-body-secondary", paste("Aineisto päivitetty", PAIVITETTY_FI))
   ),
+  div(class = "paivitysrivi small text-body-secondary mb-2",
+      strong("Aineisto päivitetty ", PAIVITETTY_FI), " · uusin toteutunut tieto ",
+      VIIMEISIN_HAVAINTO, " · päivittyy arkisin noin klo 8.30"),
   do.call(navset_card_underline, c(list(id = "valilehti"), paneelit))
 )
 
