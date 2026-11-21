@@ -14,6 +14,11 @@ Sininen tarkoittaa kasvua ja punainen laskua.
 | T&K-investoinnit | investoinnit henkisiin omaisuustuotteisiin (neljännesvuosittain); T&K-menot (vuosittain, näkyy Q4:llä) | Tilastokeskus ntp/132h, tkke/13ri |
 | Investoinnit yhteensä | kiinteän pääoman bruttomuodostus; yksityiset ja julkiset investoinnit; investointilajit | Tilastokeskus ntp/132h |
 
+Sovellus toimii myös puhelimessa. Kapealla näytöllä sarjan nimi näkyy oman
+rivinsä yläpuolella, ja näkyvissä on niin monta neljännestä kuin näytölle mahtuu
+(viimeisimmät toteutuneet ja lähiajan ennuste). Aikaväliä voi vaihtaa valikosta.
+Solua napauttamalla näkee tarkat luvut.
+
 Sovelluksen *Lähteet ja menetelmät* -välilehdellä näkyy jokaisen sarjan yksikkö,
 lähdetaulukko, vertailutapa ja viimeisin neljännes.
 

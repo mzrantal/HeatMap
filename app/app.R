@@ -57,8 +57,22 @@ VARI_PUUTTUU <- "#e4e3df"
 # -----------------------------------------------------------------------------
 # Heatmapin piirto
 # -----------------------------------------------------------------------------
-heatmap_kuva <- function(d, raja, nayta_arvot) {
-  d$sarja_f <- factor(d$sarja, levels = rev(unique(d$sarja)))
+# Rivien pystysijainnit. Työpöydällä rivi i (1 = ylin) on kohdassa n - i + 1
+# ja nimi akselilla. Mobiilissa (kapea) rivien väliin jätetään tilaa, ja
+# sarjan nimi piirretään tekstinä oman rivinsä yläpuolelle.
+MOBIILI_VALI <- 1.8
+rivin_y <- function(i, n, kapea) if (kapea) (n - i) * MOBIILI_VALI + 1 else n - i + 1
+
+# Palauttaa osoitetun rivin indeksin (1 = ylin) tai NA
+osoitettu_rivi <- function(y, n, kapea) {
+  i <- if (kapea) n - round((y - 1) / MOBIILI_VALI) else n - round(y) + 1
+  if (is.na(i) || i < 1 || i > n || abs(y - rivin_y(i, n, kapea)) > 0.5) NA_integer_ else i
+}
+
+heatmap_kuva <- function(d, raja, nayta_arvot, kapea = FALSE) {
+  sarjat <- unique(d$sarja)
+  n <- length(sarjat)
+  d$ypos <- rivin_y(match(d$sarja, sarjat), n, kapea)
   d$neljannes_f <- factor(d$neljannes, levels = sort(unique(d$neljannes)))
   pyor <- round(d$muutos)
   pyor[!is.na(pyor) & pyor == 0] <- 0   # ei "-0"
@@ -66,11 +80,12 @@ heatmap_kuva <- function(d, raja, nayta_arvot) {
   d$tumma <- !is.na(d$muutos) & abs(d$muutos) > 0.55 * raja & !d$ennuste
   nelj <- levels(d$neljannes_f)
   merkit <- ifelse(substr(nelj, 6, 6) == "1", nelj, substr(nelj, 5, 6))
+  y_yla <- rivin_y(1, n, kapea) + if (kapea) 1.25 else 0.5
 
   ennuste <- d[d$ennuste, ]
-  p <- ggplot(d, aes(x = neljannes_f, y = sarja_f, fill = muutos)) +
-    geom_tile(aes(alpha = ennuste), colour = "white", linewidth = 0.6, show.legend = FALSE) +
-    scale_alpha_manual(values = c(`FALSE` = 1, `TRUE` = 0.5)) +
+  p <- ggplot(d, aes(x = neljannes_f, y = ypos, fill = muutos)) +
+    geom_tile(aes(alpha = ennuste), height = 1, colour = "white", linewidth = 0.6) +
+    scale_alpha_manual(values = c(`FALSE` = 1, `TRUE` = 0.5), guide = "none") +
     scale_fill_gradient2(
       low = VARI_NEG, mid = VARI_KESKI, high = VARI_POS, midpoint = 0,
       limits = c(-raja, raja), oob = scales::squish, na.value = VARI_PUUTTUU,
@@ -78,32 +93,43 @@ heatmap_kuva <- function(d, raja, nayta_arvot) {
       labels = function(x) ifelse(abs(x) >= raja, paste0(ifelse(x > 0, "≥ ", "≤ "), x), x)
     ) +
     scale_x_discrete(labels = merkit, expand = c(0, 0)) +
-    scale_y_discrete(expand = c(0, 0)) +
+    scale_y_continuous(breaks = if (kapea) NULL else rivin_y(seq_len(n), n, FALSE),
+                       labels = if (kapea) NULL else sarjat,
+                       limits = c(0.5, y_yla), expand = c(0, 0)) +
     labs(x = NULL, y = NULL) +
-    theme_minimal(base_size = 13) +
+    theme_minimal(base_size = if (kapea) 11 else 13) +
     theme(
       panel.grid = element_blank(),
-      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 10, colour = "#52514e"),
+      axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = if (kapea) 8.5 else 10,
+                                 colour = "#52514e"),
       axis.text.y = element_text(size = 12, colour = "#0b0b0b"),
       legend.position = "top",
       legend.justification = "left",
-      legend.key.width = unit(2.2, "cm"),
+      legend.key.width = unit(if (kapea) 1.3 else 2.2, "cm"),
       legend.key.height = unit(0.35, "cm"),
-      legend.title = element_text(size = 10, colour = "#52514e"),
+      legend.title = element_text(size = if (kapea) 8.5 else 10, colour = "#52514e"),
+      legend.text = element_text(size = if (kapea) 8 else 10),
       plot.margin = margin(16, 8, 4, 4)
     )
+  # Mobiili: sarjan nimi rivin yläpuolelle
+  if (kapea) {
+    nimet <- data.frame(sarja = sarjat, ypos = rivin_y(seq_len(n), n, TRUE) + 0.56)
+    nimet$sarja <- vapply(nimet$sarja, function(t) paste(strwrap(t, 46), collapse = "\n"), "")
+    p <- p + geom_text(data = nimet, aes(x = 0.5, y = ypos, label = sarja), inherit.aes = FALSE,
+                       hjust = 0, vjust = 0, size = 3.1, lineheight = 0.9, colour = "#0b0b0b")
+  }
   # Ennustesolut: vaaleampi väri, katkoviivareunus ja kursivoitu luku
   if (nrow(ennuste)) {
     p <- p + geom_tile(data = ennuste, fill = NA, colour = "#8a8984",
                        linewidth = 0.35, linetype = "22", width = 0.86, height = 0.8)
     eka <- match(min(ennuste$neljannes), nelj)
     p <- p + geom_vline(xintercept = eka - 0.5, colour = "#52514e", linewidth = 0.5, linetype = "dashed") +
-      annotate("text", x = eka - 0.4, y = length(levels(d$sarja_f)) + 0.62, label = "ennuste →",
-               hjust = 0, vjust = 0, size = 3.2, colour = "#52514e") +
+      annotate("text", x = eka - 0.4, y = y_yla + 0.12, label = "ennuste →",
+               hjust = 0, vjust = 0, size = if (kapea) 2.8 else 3.2, colour = "#52514e") +
       coord_cartesian(clip = "off")
   }
   if (nayta_arvot) {
-    koko <- if (length(nelj) > 32) 2.2 else 3   # pitkillä aikaväleillä pienempi teksti
+    koko <- if (kapea) 2.5 else if (length(nelj) > 32) 2.2 else 3   # pitkillä aikaväleillä pienempi teksti
     p <- p + geom_text(aes(label = teksti, colour = tumma,
                            fontface = ifelse(ennuste, "italic", "plain")),
                        size = koko, show.legend = FALSE) +
@@ -112,7 +138,14 @@ heatmap_kuva <- function(d, raja, nayta_arvot) {
   p
 }
 
-kuvan_korkeus <- function(n_rivit) 110 + 38 * n_rivit
+kuvan_korkeus <- function(n_rivit, kapea = FALSE) if (kapea) 120 + 52 * n_rivit else 110 + 38 * n_rivit
+
+# Mobiilinäkymä: näytön leveys alle tämän (px)
+KAPEA_RAJA <- 768
+# Mobiilissa solun vähimmäisleveys (px). Jos valittu aikaväli ei mahdu,
+# näytetään niin monta neljännestä kuin mahtuu, painottaen viimeisimpiä
+# toteutuneita tietoja ja lähivuosien ennustetta.
+SOLU_MIN <- 26
 
 # -----------------------------------------------------------------------------
 # Käyttöliittymä
@@ -135,7 +168,7 @@ paneelit <- c(
   lapply(seq_along(AIHEET), function(i) heatmap_paneeli(i, AIHEET[i], KUVAUKSET[[AIHEET[i]]])),
   list(nav_panel("Lähteet ja menetelmät", card(
     card_header("Sarjat, lähteet ja menetelmät"),
-    tableOutput("lahteet"),
+    div(class = "taulukko-vieritys", tableOutput("lahteet")),
     p(class = "small text-body-secondary",
       "Tilastokeskuksen aineistot haetaan StatFin-tietokannan PxWeb-rajapinnasta. ",
       "Kuukausisarjat summataan (määrät) tai keskiarvoistetaan (indeksit) neljänneksiksi; ",
@@ -150,7 +183,7 @@ paneelit <- c(
       "mediaania (2015 alkaen, rajattu välille −3…+5 %): poikkeamasta säilyy 80 % neljänneksessä. ",
       "Datakeskusten ennuste on uutisoitu hankeputki ilmoitettujen valmistumisvuosien mukaan; hankkeet ilman ",
       "valmistumisvuotta eivät ole mukana."),
-    tableOutput("oletukset"),
+    div(class = "taulukko-vieritys", tableOutput("oletukset")),
     p(class = "small text-body-secondary",
       "Datakeskusten uutisaineisto on Dataikkuna-hankeluettelosta (uutisointien perusteella koottu). ",
       "Hankkeen rakennusaika päätellään uutisteksteistä (rakentamisen alku, valmistumisen neljännes) tai oletuksista, ",
@@ -166,7 +199,41 @@ ui <- page_sidebar(
   theme = bs_theme(version = 5, primary = VARI_POS, base_font = font_collection(
     "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif")),
   fillable = FALSE,
+  tags$head(
+    tags$meta(name = "viewport", content = "width=device-width, initial-scale=1"),
+    tags$style(HTML("
+      .heatmap-vieritys { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .taulukko-vieritys { overflow-x: auto; }
+      @media (max-width: 767.98px) {
+        .bslib-page-title, .navbar-brand { font-size: 1.05rem; white-space: normal; }
+        .nav-underline, .nav-tabs { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden;
+                                    scrollbar-width: none; }
+        .nav-underline .nav-link, .nav-tabs .nav-link { white-space: nowrap; font-size: 0.9rem; }
+        .card-body { padding: 0.6rem; }
+        .main { padding: 0.5rem !important; }
+        .taulukko-vieritys table { font-size: 0.8rem; }
+      }
+    ")),
+    # Ilmoittaa näytön leveyden palvelimelle (mobiilinäkymä)
+    tags$script(HTML("
+      (function() {
+        // Lähetetään vain, kun leveys muuttuu: mobiilin osoiterivin piiloutuminen
+        // ja sisällön korkeuden muutokset eivät saa piirtää kuvaa uudelleen
+        var edellinen = null;
+        function leveys() {
+          var w = window.innerWidth;
+          if (w === edellinen || !(window.Shiny && Shiny.setInputValue)) return;
+          edellinen = w;
+          Shiny.setInputValue('leveys', w);
+        }
+        var ajastin;
+        window.addEventListener('resize', function() { clearTimeout(ajastin); ajastin = setTimeout(leveys, 300); });
+        $(document).on('shiny:connected', leveys);
+      })();
+    "))
+  ),
   sidebar = sidebar(
+    open = "desktop",   # auki työpöydällä, suljettu mobiilissa
     width = 280,
     sliderInput("vuodet", "Aikaväli", min = as.integer(substr(min(DATA$neljannes), 1, 4)),
                 max = as.integer(substr(max(DATA$neljannes), 1, 4)),
@@ -182,7 +249,8 @@ ui <- page_sidebar(
       span(style = paste0("color:", VARI_POS, ";font-weight:600"), "Sininen"), " = kasvua, ",
       span(style = paste0("color:", VARI_NEG, ";font-weight:600"), "punainen"), " = laskua vuoden takaisesta. ",
       "Harmaa = ei tietoa. Vaaleat, katkoviivalla reunustetut solut ovat ennustetta."),
-    p(class = "small text-body-secondary", "Vie hiiri solun päälle nähdäksesi tarkat luvut."),
+    p(class = "small text-body-secondary",
+      "Vie hiiri solun päälle tai napauta solua nähdäksesi tarkat luvut."),
     p(class = "small text-body-secondary", paste("Aineisto päivitetty:", PAIVITETTY))
   ),
   do.call(navset_card_underline, c(list(id = "valilehti"), paneelit))
@@ -192,6 +260,26 @@ ui <- page_sidebar(
 # Palvelin
 # -----------------------------------------------------------------------------
 server <- function(input, output, session) {
+
+  kapea <- reactive(isTRUE(input$leveys < KAPEA_RAJA))
+
+  # Mobiilissa näytettävä neljännesikkuna
+  mobiili_ikkuna <- function(d) {
+    nelj <- sort(unique(d$neljannes))
+    mahtuu <- max(6, floor((input$leveys - 40) / SOLU_MIN))
+    if (length(nelj) <= mahtuu) return(d)
+    # loppu: ensimmäinen ennustevuosi mukaan, enintään valitun välin loppu
+    eka_ennuste <- suppressWarnings(min(d$neljannes[d$ennuste]))
+    loppu_i <- if (is.finite(match(eka_ennuste, nelj))) min(length(nelj), match(eka_ennuste, nelj) + 3) else length(nelj)
+    alku_i <- max(1, loppu_i - mahtuu + 1)
+    loppu_i <- min(length(nelj), alku_i + mahtuu - 1)
+    d[d$neljannes %in% nelj[alku_i:loppu_i], ]
+  }
+
+  naytettava <- function(id) {
+    d <- aiheen_data(id)
+    if (kapea() && nrow(d)) mobiili_ikkuna(d) else d
+  }
 
   rajattu <- reactive({
     v <- input$vuodet
@@ -220,24 +308,36 @@ server <- function(input, output, session) {
 
   piirra <- function(id) {
     output[[paste0("kuva_", id)]] <- renderUI({
-      d <- aiheen_data(id)
-      plotOutput(paste0("plot_", id), height = paste0(kuvan_korkeus(length(unique(d$sarja))), "px"),
-                 hover = hoverOpts(paste0("hover_", id), delay = 80, delayType = "throttle"))
+      d <- naytettava(id)
+      k <- kapea()
+      kaikki_nelj <- length(unique(aiheen_data(id)$neljannes))
+      huom <- if (k && length(unique(d$neljannes)) < kaikki_nelj)
+        p(class = "small text-body-secondary mb-1",
+          sprintf("Näytetään %s–%s. Muuta aikaväliä valikosta (‹ vasemmalla ylhäällä).",
+                  min(d$neljannes), max(d$neljannes)))
+      tagList(huom, div(class = "heatmap-vieritys",
+          plotOutput(paste0("plot_", id), width = "100%",
+                     height = paste0(kuvan_korkeus(length(unique(d$sarja)), k), "px"),
+                     hover = hoverOpts(paste0("hover_", id), delay = 80, delayType = "throttle"),
+                     click = clickOpts(paste0("click_", id)))))
     })
     output[[paste0("plot_", id)]] <- renderPlot({
-      d <- aiheen_data(id)
+      d <- naytettava(id)
       validate(need(nrow(d) > 0, "Ei tietoja valitulla aikavälillä."))
-      heatmap_kuva(d, input$raja, input$arvot)
+      heatmap_kuva(d, input$raja, input$arvot, kapea())
     }, res = 96)
     output[[paste0("info_", id)]] <- renderUI({
+      # Hiiri (työpöytä) tai napautus (mobiili)
       h <- input[[paste0("hover_", id)]]
-      d <- aiheen_data(id)
-      teksti <- "Vie hiiri solun päälle."
+      if (is.null(h)) h <- input[[paste0("click_", id)]]
+      d <- naytettava(id)
+      teksti <- "Vie hiiri solun päälle tai napauta solua."
       if (!is.null(h) && nrow(d)) {
         nelj <- sort(unique(d$neljannes))
-        sarjat <- rev(unique(d$sarja))
-        xi <- round(h$x); yi <- round(h$y)
-        if (xi >= 1 && xi <= length(nelj) && yi >= 1 && yi <= length(sarjat)) {
+        sarjat <- unique(d$sarja)
+        xi <- round(h$x)
+        yi <- osoitettu_rivi(h$y, length(sarjat), kapea())
+        if (xi >= 1 && xi <= length(nelj) && !is.na(yi)) {
           rivi <- d[d$sarja == sarjat[yi] & d$neljannes == nelj[xi], ]
           if (nrow(rivi)) {
             muutos <- if (is.na(rivi$muutos)) "ei tietoa" else
