@@ -5,7 +5,10 @@ name: Päivitä aineisto ja julkaise
 
 on:
   schedule:
-    - cron: "17 4 * * *"          # joka päivä klo 04.17 UTC (6.17/7.17 Suomen aikaa)
+    # Arkisin ma–pe klo 06.33 UTC: talviaikaan 8.33 ja kesäaikaan 9.33 Suomen aikaa,
+    # Tilastokeskuksen klo 8 julkaisujen jälkeen. GitHubin ajastus on UTC-ajassa
+    # eikä seuraa kesäaikaa. Minuutti 33 välttää tasa- ja puolitunnin ruuhkan.
+    - cron: "33 6 * * 1-5"
   push:
     branches: [main, claude/modest-fermat-xf2tzn]
     paths:

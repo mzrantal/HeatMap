@@ -62,7 +62,10 @@ data/Dataikkuna*.xlsx datakeskusten uutisaineisto
 
 ## Päivitys
 
-GitHub Actions (`.github/workflows/paivita.yml`) toimii näin joka aamu klo 04.17 UTC:
+GitHub Actions (`.github/workflows/paivita.yml`) toimii näin arkisin (ma–pe)
+klo 06.33 UTC eli talviaikaan 8.33 ja kesäaikaan 9.33 Suomen aikaa, kun
+Tilastokeskuksen klo 8 julkaisut ovat ilmestyneet. GitHub voi käynnistää
+ajastetun ajon ruuhkan vuoksi myöhässä.
 
 1. Ajaa skriptin `R/paivita_data.R`, joka hakee uusimmat tiedot Tilastokeskuksen
    StatFin-rajapinnasta.
