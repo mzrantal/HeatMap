@@ -12,6 +12,9 @@ library(ggplot2)
 
 DATA <- read.csv("data/heatmap.csv", encoding = "UTF-8", stringsAsFactors = FALSE)
 DATA$ennuste <- as.logical(DATA$ennuste)
+# Ennustejakso: enintään kuluva vuosi + 2 vuotta (kaikki vuoden neljännekset)
+ENNUSTE_VIIMEINEN_VUOSI <- as.integer(format(Sys.Date(), "%Y")) + 2
+DATA <- DATA[as.integer(substr(DATA$neljannes, 1, 4)) <= ENNUSTE_VIIMEINEN_VUOSI, ]
 OLETUKSET <- if (file.exists("data/ennusteoletukset.csv"))
   read.csv("data/ennusteoletukset.csv", encoding = "UTF-8", stringsAsFactors = FALSE) else NULL
 PAIVITETTY <- if (file.exists("data/paivitetty.txt")) readLines("data/paivitetty.txt", warn = FALSE)[1] else "?"
@@ -177,7 +180,7 @@ paneelit <- c(
       "Viimeisimmät tiedot ovat ennakollisia ja voivat tarkentua."),
     h6("Ennusteet", class = "mt-3"),
     p(class = "small text-body-secondary",
-      "Ennusteet ulottuvat vuoden 2029 loppuun. Jos sarjalle on julkaistu vuosiennuste (taulukko alla), ",
+      paste0("Ennusteet ulottuvat kuluvan vuoden + 2 vuoden loppuun (", ENNUSTE_VIIMEINEN_VUOSI, "Q4). "), "Jos sarjalle on julkaistu vuosiennuste (taulukko alla), ",
       "vuoden jäljellä olevat neljännekset asetetaan niin, että koko vuoden muutos vastaa ennustetta. ",
       "Muina vuosina vuosimuutos palautuu tilastollisesti edellisestä neljänneksestä kohti sarjan pitkän aikavälin ",
       "mediaania (2015 alkaen, rajattu välille −3…+5 %): poikkeamasta säilyy 80 % neljänneksessä. ",
@@ -243,7 +246,7 @@ ui <- page_sidebar(
                 step = 1, sep = ""),
     sliderInput("raja", "Väriasteikon raja (± %)", min = 5, max = 100, value = 25, step = 5),
     checkboxInput("arvot", "Näytä luvut soluissa", value = TRUE),
-    checkboxInput("ennusteet", "Näytä ennusteet (vuoden 2029 loppuun)", value = TRUE),
+    checkboxInput("ennusteet", paste0("Näytä ennusteet (", ENNUSTE_VIIMEINEN_VUOSI, " loppuun)"), value = TRUE),
     hr(),
     p(class = "small text-body-secondary",
       span(style = paste0("color:", VARI_POS, ";font-weight:600"), "Sininen"), " = kasvua, ",

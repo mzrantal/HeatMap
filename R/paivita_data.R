@@ -426,7 +426,7 @@ rivit <- c(rivit, list(tkke))
 data <- do.call(rbind, rivit[!vapply(rivit, is.null, logical(1))])
 
 # -----------------------------------------------------------------------------
-# 4. Ennusteet vuoden 2029 loppuun
+# 4. Ennusteet kuluvan vuoden + 2 vuoden loppuun (ENNUSTE_LOPPU, R/ennuste.R)
 # -----------------------------------------------------------------------------
 message("Lasketaan ennusteet...")
 sarjajarjestys <- unique(paste(data$aihe, data$sarja))

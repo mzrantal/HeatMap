@@ -22,9 +22,9 @@ Solua napauttamalla näkee tarkat luvut.
 Sovelluksen *Lähteet ja menetelmät* -välilehdellä näkyy jokaisen sarjan yksikkö,
 lähdetaulukko, vertailutapa ja viimeisin neljännes.
 
-## Ennusteet vuoden 2029 loppuun
+## Ennusteet kuluvan vuoden + 2 vuoden loppuun
 
-Toteutuneiden tietojen jälkeen jokaiselle sarjalle lasketaan ennuste vuoden 2029
+Toteutuneiden tietojen jälkeen jokaiselle sarjalle lasketaan ennuste kuluvan vuoden + 2 vuoden
 loppuun (`R/ennuste.R`). Sovelluksessa ennustesolut näkyvät vaaleampina ja
 katkoviivalla reunustettuina, ja ennusteet voi piilottaa.
 
@@ -45,13 +45,14 @@ katkoviivalla reunustettuina, ja ennusteet voi piilottaa.
    mukaan. Hankkeet, joilta valmistumisvuosi puuttuu, eivät ole mukana
    (valmistumisvuotta ei imputoida).
 
-Kaikki sarjat katkaistaan neljännekseen 2029Q4.
+Kaikki sarjat katkaistaan kuluvan vuoden + 2 vuoden viimeiseen neljännekseen
+(vuonna 2026: 2028Q4). Raja siirtyy automaattisesti vuodenvaihteessa.
 
 ## Rakenne
 
 ```
 R/paivita_data.R      hakee aineistot ja laskee vuosimuutokset -> app/data/heatmap.csv
-R/ennuste.R           ennusteet vuoden 2029 loppuun
+R/ennuste.R           ennusteet kuluvan vuoden + 2 vuoden loppuun
 data/ennusteoletukset.csv  julkaistut vuosiennusteet ja niiden lähteet
 app/app.R             Shiny-sovellus (shiny, bslib, ggplot2)
 app/data/             sovelluksen käyttämä aineisto (päivittyy automaattisesti)

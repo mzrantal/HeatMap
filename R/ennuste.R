@@ -1,5 +1,5 @@
 # =============================================================================
-# Ennusteet vuoden 2029 loppuun (lähdetään skriptistä R/paivita_data.R).
+# Ennusteet kuluvan vuoden + 2 vuoden loppuun (lähdetään skriptistä R/paivita_data.R).
 #
 # Jokaiselle sarjalle ennustetaan muutos vuoden takaisesta (%) neljänneksittäin
 # viimeisimmän havainnon jälkeen kahdella tavalla:
@@ -17,7 +17,9 @@
 # Tasot lasketaan vuoden takaisesta tasosta ennustetulla muutoksella.
 # =============================================================================
 
-ENNUSTE_LOPPU <- "2029Q4"
+# Ennustejakso: enintään kuluva vuosi + 2 vuotta, kaikki vuoden neljännekset
+ENNUSTE_VUODET <- 2
+ENNUSTE_LOPPU <- paste0(as.integer(format(Sys.Date(), "%Y")) + ENNUSTE_VUODET, "Q4")
 PALAUTUS <- 0.8           # osuus poikkeamasta, joka säilyy seuraavaan neljännekseen
 TAVOITE_RAJAT <- c(-3, 5) # pitkän aikavälin vuosimuutoksen rajat, %
 
