@@ -84,7 +84,8 @@ osoitettu_rivi <- function(y, n, kapea) {
 # korko_raja: korkojen oma väriasteikko (± prosenttiyksikköä = täysi väri);
 # korkorivien muutos skaalataan samalle väriasteikolle kuin muut rivit
 heatmap_kuva <- function(d, raja, nayta_arvot, kapea = FALSE, korko_raja = 1) {
-  d$vari <- ifelse(d$aihe == "Korot", d$muutos * raja / korko_raja, d$muutos)
+  # Korot: nousu on huono asia, joten värit käännetään (nousu punainen, lasku sininen)
+  d$vari <- ifelse(d$aihe == "Korot", -d$muutos * raja / korko_raja, d$muutos)
   sarjat <- unique(d$sarja)
   n <- length(sarjat)
   d$ypos <- rivin_y(match(d$sarja, sarjat), n, kapea)
@@ -192,7 +193,7 @@ heatmap_paneeli <- function(id, otsikko, kuvaus) {
 
 paneelit <- c(
   list(heatmap_paneeli("yleis", "Yleiskuva",
-                       "Kunkin aihealueen pääsarja. Solu = neljänneksen muutos (%) samasta neljänneksestä vuotta aiemmin. 12 kk euriborin solu on muutos edellisestä neljänneksestä prosenttiyksikköinä, ja sillä on oma väriasteikko (sivuvalikko, oletus ± 0,5 %-yks. = täysi väri).")),
+                       "Kunkin aihealueen pääsarja. Solu = neljänneksen muutos (%) samasta neljänneksestä vuotta aiemmin. 12 kk euriborin solu on muutos edellisestä neljänneksestä prosenttiyksikköinä, ja sillä on oma väriasteikko (sivuvalikko, oletus ± 0,5 %-yks. = täysi väri). Euriborin värit ovat käänteiset: koron nousu näkyy punaisena ja lasku sinisenä.")),
   lapply(seq_along(AIHEET), function(i) heatmap_paneeli(i, AIHEET[i], KUVAUKSET[[AIHEET[i]]])),
   list(nav_panel("Lähteet ja menetelmät", card(
     card_header("Sarjat, lähteet ja menetelmät"),
@@ -268,17 +269,18 @@ ui <- page_sidebar(
                 max = as.integer(substr(max(DATA$neljannes), 1, 4)),
                 value = c(max(as.integer(format(Sys.Date(), "%Y")) - 3,   # oletus: kuluva vuosi - 3, alkaen Q1:stä
                               as.integer(substr(min(DATA$neljannes), 1, 4))),
-                          as.integer(substr(max(DATA$neljannes), 1, 4))),
+                          as.integer(format(Sys.Date(), "%Y"))),   # ennusteet piilossa oletuksena
                 step = 1, sep = ""),
     sliderInput("raja", "Väriasteikon raja (± %)", min = 5, max = 100, value = 25, step = 5),
     sliderInput("korkoraja", "Euriborin väriasteikko (± %-yks.)", min = 0.1, max = 2, value = 0.5, step = 0.1),
     checkboxInput("arvot", "Näytä luvut soluissa", value = TRUE),
-    checkboxInput("ennusteet", paste0("Näytä ennusteet (", ENNUSTE_VIIMEINEN_VUOSI, " loppuun)"), value = TRUE),
+    checkboxInput("ennusteet", paste0("Näytä ennusteet (", ENNUSTE_VIIMEINEN_VUOSI, " loppuun)"), value = FALSE),
     hr(),
     p(class = "small text-body-secondary",
       span(style = paste0("color:", VARI_POS, ";font-weight:600"), "Sininen"), " = kasvua, ",
       span(style = paste0("color:", VARI_NEG, ";font-weight:600"), "punainen"), " = laskua vuoden takaisesta. ",
-      "Harmaa = ei tietoa. Vaaleat, katkoviivalla reunustetut solut ovat ennustetta."),
+      "Harmaa = ei tietoa. Vaaleat, katkoviivalla reunustetut solut ovat ennustetta. ",
+      "Euriborissa värit toisin päin: koron nousu punainen, lasku sininen."),
     p(class = "small text-body-secondary",
       "Vie hiiri solun päälle tai napauta solua nähdäksesi tarkat luvut."),
     p(class = "small text-body-secondary", paste("Aineisto päivitetty", PAIVITETTY_FI))
@@ -295,6 +297,13 @@ ui <- page_sidebar(
 server <- function(input, output, session) {
 
   kapea <- reactive(isTRUE(input$leveys < KAPEA_RAJA))
+
+  # Kun ennusteet otetaan näkyviin, aikaväli ulottuu ennusteen loppuun;
+  # kun ne piilotetaan, aikaväli päättyy kuluvaan vuoteen
+  observeEvent(input$ennusteet, {
+    loppu <- if (isTRUE(input$ennusteet)) ENNUSTE_VIIMEINEN_VUOSI else as.integer(format(Sys.Date(), "%Y"))
+    updateSliderInput(session, "vuodet", value = c(input$vuodet[1], loppu))
+  }, ignoreInit = TRUE)
 
   # Mobiilissa näytettävä neljännesikkuna
   mobiili_ikkuna <- function(d) {

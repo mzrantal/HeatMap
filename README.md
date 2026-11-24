@@ -26,7 +26,8 @@ lähdetaulukko, vertailutapa ja viimeisin neljännes.
 
 Toteutuneiden tietojen jälkeen jokaiselle sarjalle lasketaan ennuste kuluvan vuoden + 2 vuoden
 loppuun (`R/ennuste.R`). Sovelluksessa ennustesolut näkyvät vaaleampina ja
-katkoviivalla reunustettuina, ja ennusteet voi piilottaa.
+katkoviivalla reunustettuina. Ennusteet ovat oletuksena piilossa, ja ne saa
+näkyviin sivuvalikosta.
 
 1. **Julkaistut ennusteet** (`data/ennusteoletukset.csv`): Taulukossa on vuosimuutokset,
    jotka on poimittu uutisoinnista ja toimialojen julkaisuista. Lähteinä ovat
@@ -53,7 +54,8 @@ Kaikki sarjat katkaistaan kuluvan vuoden + 2 vuoden viimeiseen neljännekseen
 Yleiskuvassa on 12 kk euribor (EKP:n tietopalvelu, `R/korot.R`). Toisin kuin
 muissa sarjoissa, sen solu kertoo muutoksen edellisestä neljänneksestä
 prosenttiyksikköinä, ja sillä on oma väriasteikko (sivuvalikko, oletus
-± 0,5 %-yks. = täysi väri). Ennuste perustuu tiedoston
+± 0,5 %-yks. = täysi väri). Euriborin värit ovat käänteiset: koron nousu näkyy
+punaisena ja lasku sinisenä. Ennuste perustuu tiedoston
 `data/korko_ennuste.csv` korkotason ennustepisteisiin: viimeisimmästä
 toteutuneesta neljänneksestä pisteiden välille interpoloidaan suoraan, ja
 viimeisen pisteen jälkeen korko pysyy ennallaan. Pisteitä voi päivittää käsin.
