@@ -378,10 +378,6 @@ rivit <- list(
 
   # --- Korot (näytetään yleiskuvassa; muutos prosenttiyksikköinä)
   r("Korot", "12 kk euribor", KOROT[["12 kk euribor"]], "EKP (FM, Euribor)", "%", "Neljänneksen keskikorko; muutos vuoden takaisesta prosenttiyksikköinä"),
-  r("Korot", "Uudet asuntolainat: keskikorko", KOROT[["Uudet asuntolainat: keskikorko"]],
-    "EKP (MIR, Suomi)", "%", "Neljänneksen keskikorko; muutos vuoden takaisesta prosenttiyksikköinä"),
-  r("Korot", "Uudet yrityslainat: keskikorko", KOROT[["Uudet yrityslainat: keskikorko"]],
-    "EKP (MIR, Suomi)", "%", "Neljänneksen keskikorko; muutos vuoden takaisesta prosenttiyksikköinä"),
 
   # --- T&K-investoinnit
   r("T&K-investoinnit", "Henkiset omaisuustuotteet (T&K, ohjelmistot)", NTP$P51KN115_N117,
@@ -454,6 +450,12 @@ tama_q <- paste0(format(Sys.Date(), "%Y"), "Q", (as.integer(format(Sys.Date(), "
 putki <- data$lahde == "Uutisointi (Dataikkuna)" & data$neljannes >= tama_q
 data$ennuste[putki] <- TRUE
 data$ennusteen_lahde[putki] <- "Uutisoitu hankeputki (Dataikkuna), rakennusaika uutisista tai oletuksista"
+# Korot: ennustepolku (data/korko_ennuste.csv) viimeisimmän toteutuneen jälkeen
+for (nimi in names(KOROT_VIIMEINEN)) {
+  k_enn <- data$aihe == "Korot" & data$sarja == nimi & data$neljannes > KOROT_VIIMEINEN[[nimi]]
+  data$ennuste[k_enn] <- TRUE
+  data$ennusteen_lahde[k_enn] <- paste("Korkoennuste:", KOROT_ENNUSTE_LAHDE[[nimi]])
+}
 data <- data[data$neljannes <= ENNUSTE_LOPPU, ]
 data <- data[order(match(paste(data$aihe, data$sarja), sarjajarjestys), data$neljannes), ]
 data$jarjestys <- ave(seq_len(nrow(data)), data$aihe, FUN = function(i) match(data$sarja[i], unique(data$sarja[i])))

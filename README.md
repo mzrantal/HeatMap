@@ -48,6 +48,15 @@ katkoviivalla reunustettuina, ja ennusteet voi piilottaa.
 Kaikki sarjat katkaistaan kuluvan vuoden + 2 vuoden viimeiseen neljännekseen
 (vuonna 2026: 2028Q4). Raja siirtyy automaattisesti vuodenvaihteessa.
 
+## Korot
+
+Yleiskuvassa on 12 kk euribor (EKP:n tietopalvelu, `R/korot.R`). Sen muutos
+vuoden takaisesta näytetään prosenttiyksikköinä, ja sillä on oma väriasteikko
+(sivuvalikko, oletus ± 1 %-yks. = täysi väri). Ennuste perustuu tiedoston
+`data/korko_ennuste.csv` korkotason ennustepisteisiin: viimeisimmästä
+toteutuneesta neljänneksestä pisteiden välille interpoloidaan suoraan, ja
+viimeisen pisteen jälkeen korko pysyy ennallaan. Pisteitä voi päivittää käsin.
+
 ## Rakenne
 
 ```

@@ -47,10 +47,8 @@ YLEISKUVA <- list(
   c("Maa- ja vesirakentaminen", "Maa- ja vesirakennusinvestoinnit"),
   c("Datakeskusten rakentaminen", "Rakennusaikaiset investoinnit"),
   c("T&K-investoinnit", "Henkiset omaisuustuotteet (T&K, ohjelmistot)"),
-  c("Investoinnit yhteensä", "Kiinteän pääoman bruttomuodostus"),
   c("Korot", "12 kk euribor"),
-  c("Korot", "Uudet asuntolainat: keskikorko"),
-  c("Korot", "Uudet yrityslainat: keskikorko")
+  c("Investoinnit yhteensä", "Kiinteän pääoman bruttomuodostus")
 )
 
 KUVAUKSET <- list(
@@ -83,7 +81,10 @@ osoitettu_rivi <- function(y, n, kapea) {
   if (is.na(i) || i < 1 || i > n || abs(y - rivin_y(i, n, kapea)) > 0.5) NA_integer_ else i
 }
 
-heatmap_kuva <- function(d, raja, nayta_arvot, kapea = FALSE) {
+# korko_raja: korkojen oma väriasteikko (± prosenttiyksikköä = täysi väri);
+# korkorivien muutos skaalataan samalle väriasteikolle kuin muut rivit
+heatmap_kuva <- function(d, raja, nayta_arvot, kapea = FALSE, korko_raja = 1) {
+  d$vari <- ifelse(d$aihe == "Korot", d$muutos * raja / korko_raja, d$muutos)
   sarjat <- unique(d$sarja)
   n <- length(sarjat)
   d$ypos <- rivin_y(match(d$sarja, sarjat), n, kapea)
@@ -95,13 +96,13 @@ heatmap_kuva <- function(d, raja, nayta_arvot, kapea = FALSE) {
   korko <- !is.na(d$muutos) & d$aihe == "Korot"
   d$teksti[korko] <- formatC(round(d$muutos[korko], 1), format = "f", digits = 1, decimal.mark = ",")
   d$teksti[korko & d$teksti == "-0,0"] <- "0,0"
-  d$tumma <- !is.na(d$muutos) & abs(d$muutos) > 0.55 * raja & !d$ennuste
+  d$tumma <- !is.na(d$muutos) & abs(ifelse(d$aihe == "Korot", d$muutos * raja / korko_raja, d$muutos)) > 0.55 * raja & !d$ennuste
   nelj <- levels(d$neljannes_f)
   merkit <- ifelse(substr(nelj, 6, 6) == "1", nelj, substr(nelj, 5, 6))
   y_yla <- rivin_y(1, n, kapea) + if (kapea) 1.25 else 0.5
 
   ennuste <- d[d$ennuste, ]
-  p <- ggplot(d, aes(x = neljannes_f, y = ypos, fill = muutos)) +
+  p <- ggplot(d, aes(x = neljannes_f, y = ypos, fill = vari)) +
     geom_tile(aes(alpha = ennuste), height = 1, colour = "white", linewidth = 0.6) +
     scale_alpha_manual(values = c(`FALSE` = 1, `TRUE` = 0.5), guide = "none") +
     scale_fill_gradient2(
@@ -191,7 +192,7 @@ heatmap_paneeli <- function(id, otsikko, kuvaus) {
 
 paneelit <- c(
   list(heatmap_paneeli("yleis", "Yleiskuva",
-                       "Kunkin aihealueen pääsarja. Solu = neljänneksen muutos (%) samasta neljänneksestä vuotta aiemmin. Korkojen muutos on prosenttiyksikköinä (EKP; korkoja ei ennusteta).")),
+                       "Kunkin aihealueen pääsarja. Solu = neljänneksen muutos (%) samasta neljänneksestä vuotta aiemmin. 12 kk euriborin muutos on prosenttiyksikköinä, ja sillä on oma väriasteikko (sivuvalikko, oletus ± 1 %-yks. = täysi väri).")),
   lapply(seq_along(AIHEET), function(i) heatmap_paneeli(i, AIHEET[i], KUVAUKSET[[AIHEET[i]]])),
   list(nav_panel("Lähteet ja menetelmät", card(
     card_header("Sarjat, lähteet ja menetelmät"),
@@ -270,6 +271,7 @@ ui <- page_sidebar(
                           as.integer(substr(max(DATA$neljannes), 1, 4))),
                 step = 1, sep = ""),
     sliderInput("raja", "Väriasteikon raja (± %)", min = 5, max = 100, value = 25, step = 5),
+    sliderInput("korkoraja", "Euriborin väriasteikko (± %-yks.)", min = 0.25, max = 3, value = 1, step = 0.25),
     checkboxInput("arvot", "Näytä luvut soluissa", value = TRUE),
     checkboxInput("ennusteet", paste0("Näytä ennusteet (", ENNUSTE_VIIMEINEN_VUOSI, " loppuun)"), value = TRUE),
     hr(),
@@ -357,7 +359,7 @@ server <- function(input, output, session) {
     output[[paste0("plot_", id)]] <- renderPlot({
       d <- naytettava(id)
       validate(need(nrow(d) > 0, "Ei tietoja valitulla aikavälillä."))
-      heatmap_kuva(d, input$raja, input$arvot, kapea())
+      heatmap_kuva(d, input$raja, input$arvot, kapea(), input$korkoraja)
     }, res = 96)
     output[[paste0("info_", id)]] <- renderUI({
       # Hiiri (työpöytä) tai napautus (mobiili)
