@@ -59,7 +59,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for f in app/data/heatmap.csv app/data/datakeskushankkeiden_ajoitus.csv data/uljas_tuonti.csv; do
+          for f in app/data/heatmap.csv app/data/datakeskushankkeiden_ajoitus.csv data/uljas_tuonti.csv data/korot.csv; do
             if [ -f "$f" ]; then git add "$f"; fi
           done
           if git diff --cached --quiet; then

@@ -274,6 +274,12 @@ source("R/uljas.R", encoding = "UTF-8")
 uljas_paivita()
 ULJAS <- uljas_neljannessarjat()
 
+# Korkotaso (EKP:n tietopalvelu)
+message("Haetaan korot (EKP)...")
+source("R/korot.R", encoding = "UTF-8")
+korot_paivita()
+KOROT <- korot_neljannessarjat()
+
 # -----------------------------------------------------------------------------
 # 3. Heatmapien rivit aihealueittain
 # -----------------------------------------------------------------------------
@@ -370,6 +376,13 @@ rivit <- list(
   r("Datakeskusten rakentaminen", "Aloitukset: teollisuus- ja varastorakennukset", raku_sarja(RAKU, "2", "09T12", "raku-tilavuusToimenpide"),
     paste(TK, "raku/156f (välillinen mittari)"), "m³"),
 
+  # --- Korot (näytetään yleiskuvassa; muutos prosenttiyksikköinä)
+  r("Korot", "12 kk euribor", KOROT[["12 kk euribor"]], "EKP (FM, Euribor)", "%", "Neljänneksen keskikorko; muutos vuoden takaisesta prosenttiyksikköinä"),
+  r("Korot", "Uudet asuntolainat: keskikorko", KOROT[["Uudet asuntolainat: keskikorko"]],
+    "EKP (MIR, Suomi)", "%", "Neljänneksen keskikorko; muutos vuoden takaisesta prosenttiyksikköinä"),
+  r("Korot", "Uudet yrityslainat: keskikorko", KOROT[["Uudet yrityslainat: keskikorko"]],
+    "EKP (MIR, Suomi)", "%", "Neljänneksen keskikorko; muutos vuoden takaisesta prosenttiyksikköinä"),
+
   # --- T&K-investoinnit
   r("T&K-investoinnit", "Henkiset omaisuustuotteet (T&K, ohjelmistot)", NTP$P51KN115_N117,
     paste(TK, "ntp/132h"), "M€ (käypä)", VOL),
@@ -434,7 +447,8 @@ source("R/ennuste.R", encoding = "UTF-8")
 uutisrivit <- data$lahde == "Uutisointi (Dataikkuna)"
 vuositiedot <- unique(data$sarja[grepl("vuositieto", data$sarja)])
 data <- lisaa_ennusteet(data, lue_oletukset(),
-                        ohita = c(unique(data$sarja[uutisrivit]), vuositiedot))
+                        ohita = c(unique(data$sarja[uutisrivit]), vuositiedot,
+                                  unique(data$sarja[data$aihe == "Korot"])))   # korkoja ei ennusteta
 # Datakeskusten hankeputki: päättymättömät neljännekset ovat ennustetta
 tama_q <- paste0(format(Sys.Date(), "%Y"), "Q", (as.integer(format(Sys.Date(), "%m")) - 1) %/% 3 + 1)
 putki <- data$lahde == "Uutisointi (Dataikkuna)" & data$neljannes >= tama_q

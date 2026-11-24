@@ -37,10 +37,17 @@ uljas_hae_tuote <- function(ifile, taso, koodi) {
   d <- as.data.frame(d)
   message(sprintf("    %s %s: maa '%s', %d riviä", basename(ifile), koodi,
                   as.character(d$Country[1]), nrow(d)))
-  aika <- as.character(d$`Time period`)
-  kk <- grepl("^[0-9]{6}$", aika)          # kuukaudet muodossa 202606
-  data.frame(kuukausi = paste0(substr(aika[kk], 1, 4), "M", substr(aika[kk], 5, 6)),
-             arvo = as.numeric(d$values[kk]))
+  aika <- trimws(as.character(d$`Time period`))
+  message("      aikakoodeja: ", paste(utils::head(unique(aika), 4), collapse = ", "), " ... ",
+          paste(utils::tail(unique(aika), 3), collapse = ", "))
+  # Kuukaudet muodoissa 202606, 2026M06, 2026-06, 2026 M06 tai 2026/06; vuosi- ja
+  # neljännessummat (esim. 2026, 2026Q1) jätetään pois
+  osat <- regmatches(aika, regexec("^(\\d{4})\\s*[-/M]?\\s*M?(\\d{2})(\\D.*)?$", aika))
+  ok <- lengths(osat) >= 3
+  v <- vapply(osat, function(x) if (length(x) >= 3) x[2] else NA_character_, "")
+  m <- vapply(osat, function(x) if (length(x) >= 3) x[3] else NA_character_, "")
+  ok <- ok & !is.na(m) & as.integer(m) %in% 1:12 & !grepl("Q", aika)
+  data.frame(kuukausi = paste0(v[ok], "M", m[ok]), arvo = as.numeric(d$values[ok]))
 }
 
 uljas_paivita <- function() {

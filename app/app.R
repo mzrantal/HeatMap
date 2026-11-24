@@ -47,7 +47,10 @@ YLEISKUVA <- list(
   c("Maa- ja vesirakentaminen", "Maa- ja vesirakennusinvestoinnit"),
   c("Datakeskusten rakentaminen", "Rakennusaikaiset investoinnit"),
   c("T&K-investoinnit", "Henkiset omaisuustuotteet (T&K, ohjelmistot)"),
-  c("Investoinnit yhteensä", "Kiinteän pääoman bruttomuodostus")
+  c("Investoinnit yhteensä", "Kiinteän pääoman bruttomuodostus"),
+  c("Korot", "12 kk euribor"),
+  c("Korot", "Uudet asuntolainat: keskikorko"),
+  c("Korot", "Uudet yrityslainat: keskikorko")
 )
 
 KUVAUKSET <- list(
@@ -88,6 +91,10 @@ heatmap_kuva <- function(d, raja, nayta_arvot, kapea = FALSE) {
   pyor <- round(d$muutos)
   pyor[!is.na(pyor) & pyor == 0] <- 0   # ei "-0"
   d$teksti <- ifelse(is.na(pyor), "", formatC(pyor, format = "d"))
+  # Korot: muutos prosenttiyksikköinä yhdellä desimaalilla
+  korko <- !is.na(d$muutos) & d$aihe == "Korot"
+  d$teksti[korko] <- formatC(round(d$muutos[korko], 1), format = "f", digits = 1, decimal.mark = ",")
+  d$teksti[korko & d$teksti == "-0,0"] <- "0,0"
   d$tumma <- !is.na(d$muutos) & abs(d$muutos) > 0.55 * raja & !d$ennuste
   nelj <- levels(d$neljannes_f)
   merkit <- ifelse(substr(nelj, 6, 6) == "1", nelj, substr(nelj, 5, 6))
@@ -175,7 +182,7 @@ heatmap_paneeli <- function(id, otsikko, kuvaus) {
 
 paneelit <- c(
   list(heatmap_paneeli("yleis", "Yleiskuva",
-                       "Kunkin aihealueen pääsarja. Solu = neljänneksen muutos (%) samasta neljänneksestä vuotta aiemmin.")),
+                       "Kunkin aihealueen pääsarja. Solu = neljänneksen muutos (%) samasta neljänneksestä vuotta aiemmin. Korkojen muutos on prosenttiyksikköinä (EKP; korkoja ei ennusteta).")),
   lapply(seq_along(AIHEET), function(i) heatmap_paneeli(i, AIHEET[i], KUVAUKSET[[AIHEET[i]]])),
   list(nav_panel("Lähteet ja menetelmät", card(
     card_header("Sarjat, lähteet ja menetelmät"),
@@ -356,7 +363,8 @@ server <- function(input, output, session) {
           rivi <- d[d$sarja == sarjat[yi] & d$neljannes == nelj[xi], ]
           if (nrow(rivi)) {
             muutos <- if (is.na(rivi$muutos)) "ei tietoa" else
-              paste0(formatC(rivi$muutos, format = "f", digits = 1, decimal.mark = ","), " %")
+              paste0(formatC(rivi$muutos, format = "f", digits = if (rivi$aihe == "Korot") 2 else 1,
+                             decimal.mark = ","), if (rivi$aihe == "Korot") " %-yks." else " %")
             arvo <- if (is.na(rivi$arvo)) "–" else
               formatC(rivi$arvo, format = "f", digits = if (abs(rivi$arvo) < 1000) 1 else 0,
                       big.mark = " ", decimal.mark = ",")

@@ -42,7 +42,8 @@ ennusta_sarja <- function(d, aihe, sarja, oletukset, loppu = ENNUSTE_LOPPU) {
   hist <- d[!is.na(d$muutos), ]
   o <- sarjan_oletukset(oletukset, aihe, sarja)
   if (nrow(hist) == 0 || (nrow(hist) < 4 && is.null(o))) return(NULL)
-  viimeinen <- max(hist$neljannes)
+  # Ennuste alkaa viimeisimmän havainnon (taso tai muutos) jälkeen
+  viimeinen <- max(d$neljannes[!is.na(d$muutos) | !is.na(d$arvo)])
   if (viimeinen >= loppu) return(NULL)
   tulevat <- neljannekset_valilla(neljannes_siirto(viimeinen, -1), loppu)
 
