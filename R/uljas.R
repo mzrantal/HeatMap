@@ -15,6 +15,8 @@
 # =============================================================================
 
 ULJAS_VALIMUISTI <- "data/uljas_tuonti.csv"
+ULJAS_DIAGNOSTIIKKA <- "data/uljas_aikakoodit.txt"   # haun aikakoodit tarkistusta varten
+.uljas_diag <- character(0)
 # Pitkät sarjat ovat kuutiossa ULJAS_SITC2, vuodesta 2025 alkaen myös ULJAS_SITC
 ULJAS_KUUTIOT <- c("/DATABASE/01 ULKOMAANKAUPPATILASTOT/02 SITC/ULJAS_SITC2",
                    "/DATABASE/01 ULKOMAANKAUPPATILASTOT/02 SITC/ULJAS_SITC")
@@ -38,8 +40,10 @@ uljas_hae_tuote <- function(ifile, taso, koodi) {
   message(sprintf("    %s %s: maa '%s', %d riviä", basename(ifile), koodi,
                   as.character(d$Country[1]), nrow(d)))
   aika <- trimws(as.character(d$`Time period`))
-  message("      aikakoodeja: ", paste(utils::head(unique(aika), 4), collapse = ", "), " ... ",
-          paste(utils::tail(unique(aika), 3), collapse = ", "))
+  rivi <- sprintf("%s %s: %d aikakoodia: %s", basename(ifile), koodi, length(unique(aika)),
+                  paste(unique(aika), collapse = ", "))
+  message("      ", substr(rivi, 1, 300))
+  .uljas_diag <<- c(.uljas_diag, rivi)
   # Kuukaudet muodoissa 202606, 2026M06, 2026-06, 2026 M06 tai 2026/06; vuosi- ja
   # neljännessummat (esim. 2026, 2026Q1) jätetään pois
   osat <- regmatches(aika, regexec("^(\\d{4})\\s*[-/M]?\\s*M?(\\d{2})(\\D.*)?$", aika))
@@ -71,6 +75,7 @@ uljas_paivita <- function() {
     s$sarja <- t$nimi
     osat[[length(osat) + 1]] <- s
   }
+  if (length(.uljas_diag)) writeLines(.uljas_diag, ULJAS_DIAGNOSTIIKKA)
   if (length(osat) == 0) return(invisible(FALSE))
   tulos <- do.call(rbind, osat)
   tulos <- tulos[!is.na(tulos$arvo), c("sarja", "kuukausi", "arvo")]

@@ -113,7 +113,8 @@ heatmap_kuva <- function(d, raja, nayta_arvot, kapea = FALSE) {
     scale_x_discrete(labels = merkit, expand = c(0, 0)) +
     scale_y_continuous(breaks = if (kapea) NULL else rivin_y(seq_len(n), n, FALSE),
                        labels = if (kapea) NULL else sarjat,
-                       limits = c(0.5, y_yla), expand = c(0, 0)) +
+                       limits = c(0.5, y_yla), expand = c(0, 0),
+                       oob = scales::oob_keep) +   # "ennuste →" akselin yläpuolelle
     labs(x = NULL, y = NULL) +
     theme_minimal(base_size = if (kapea) 11 else 13) +
     theme(
@@ -140,10 +141,18 @@ heatmap_kuva <- function(d, raja, nayta_arvot, kapea = FALSE) {
   if (nrow(ennuste)) {
     p <- p + geom_tile(data = ennuste, fill = NA, colour = "#8a8984",
                        linewidth = 0.35, linetype = "22", width = 0.86, height = 0.8)
-    eka <- match(min(ennuste$neljannes), nelj)
-    p <- p + geom_vline(xintercept = eka - 0.5, colour = "#52514e", linewidth = 0.5, linetype = "dashed") +
-      annotate("text", x = eka - 0.4, y = y_yla + 0.12, label = "ennuste →",
-               hjust = 0, vjust = 0, size = if (kapea) 2.8 else 3.2, colour = "#52514e") +
+    # Katkoviiva kunkin sarjan omaan ennusteen alkuun (sarjojen viimeisin
+    # havainto vaihtelee), viiva rivin korkeudelta
+    rajat <- aggregate(neljannes ~ sarja, data = ennuste, FUN = min)
+    rajat$x <- match(rajat$neljannes, nelj) - 0.5
+    rajat$y <- d$ypos[match(rajat$sarja, d$sarja)]
+    p <- p + geom_segment(data = rajat, aes(x = x, xend = x, y = y - 0.5, yend = y + 0.5),
+                          inherit.aes = FALSE, colour = "#52514e", linewidth = 0.6,
+                          linetype = "dashed")
+    # "ennuste →" ylimmän ennusterivin rajan kohdalle
+    ylin <- rajat[which.max(rajat$y), ]
+    p <- p + annotate("text", x = ylin$x + 0.1, y = y_yla + 0.12, label = "ennuste →",
+                      hjust = 0, vjust = 0, size = if (kapea) 2.8 else 3.2, colour = "#52514e") +
       coord_cartesian(clip = "off")
   }
   if (nayta_arvot) {
@@ -290,9 +299,11 @@ server <- function(input, output, session) {
     nelj <- sort(unique(d$neljannes))
     mahtuu <- max(6, floor((input$leveys - 40) / SOLU_MIN))
     if (length(nelj) <= mahtuu) return(d)
-    # loppu: ensimmäinen ennustevuosi mukaan, enintään valitun välin loppu
-    eka_ennuste <- suppressWarnings(min(d$neljannes[d$ennuste]))
-    loppu_i <- if (is.finite(match(eka_ennuste, nelj))) min(length(nelj), match(eka_ennuste, nelj) + 3) else length(nelj)
+    # loppu: viimeisin toteutunut neljännes + 4 ennusteneljännestä,
+    # enintään valitun välin loppu
+    toteutunut <- d$neljannes[!d$ennuste & !is.na(d$muutos)]
+    viimeisin <- if (length(toteutunut)) match(max(toteutunut), nelj) else NA
+    loppu_i <- if (!is.na(viimeisin)) min(length(nelj), viimeisin + 4) else length(nelj)
     alku_i <- max(1, loppu_i - mahtuu + 1)
     loppu_i <- min(length(nelj), alku_i + mahtuu - 1)
     d[d$neljannes %in% nelj[alku_i:loppu_i], ]
