@@ -52,14 +52,17 @@ YLEISKUVA <- list(
 )
 
 KUVAUKSET <- list(
-  "Asuntorakentaminen" = "Asuntojen rakennusluvat, aloitukset ja valmistumiset (kpl) neljänneksittäin, uudisrakentamisen volyymi-indeksi sekä asuinrakennusinvestointien volyymi.",
-  "Käytettyjen asuntojen kauppa" = "Vanhojen osakeasuntojen kauppamäärät (kiinteistönvälittäjät ja varainsiirtoverotiedot) sekä hintaindeksi alueittain ja talotyypeittäin.",
+  "Asuntorakentaminen" = "Asuntojen rakennusluvat, aloitukset ja valmistumiset (kpl) neljänneksittäin, uudisrakentamisen volyymi-indeksi sekä asuinrakennusinvestointien volyymi. Viimeisellä rivillä 12 kk euribor: muutos edellisestä neljänneksestä prosenttiyksikköinä, nousu punaisella ja lasku sinisellä.",
+  "Käytettyjen asuntojen kauppa" = "Vanhojen osakeasuntojen kauppamäärät (kiinteistönvälittäjät ja varainsiirtoverotiedot) sekä hintaindeksi alueittain ja talotyypeittäin. Viimeisellä rivillä 12 kk euribor: muutos edellisestä neljänneksestä prosenttiyksikköinä, nousu punaisella ja lasku sinisellä.",
   "Muu talorakentaminen" = "Muiden kuin asuinrakennusten rakennusluvat, aloitukset ja valmistumiset tilavuutena (m³), uudisrakentamisen volyymi-indeksi ja investoinnit muihin talorakennuksiin.",
   "Maa- ja vesirakentaminen" = "Maa- ja vesirakennusinvestointien volyymi (kansantalouden tilinpito) sekä maa- ja vesirakentamisen toimialan (TOL 42) liikevaihto ja myynnin määrä.",
   "Datakeskusten rakentaminen" = "Uutisoidut datakeskushankkeet (Dataikkuna-aineisto) rakennusajan mukaan. Hankkeen investointi jaetaan tasan rakennusajan neljänneksille. Rakentamisen alku ja valmistumisneljännes poimitaan uutisteksteistä (esim. \"rakentaminen alkaa 2027 ensimmäisellä vuosipuoliskolla\", \"valmistuu syksyllä 2026\"); muuten valmistuminen on valmistumisvuoden Q3 ja rakennusaika 6 neljännestä (alle 500 M€) tai 8 neljännestä. Laiteinvestointeja kuvaa Tullin tilasto toimistokoneiden ja atk-laitteiden (SITC 75) sekä atk-laitteiden (SITC 752) tuonnista. Välillisenä mittarina myös teollisuus- ja varastorakennusten aloitukset (Tilastokeskus).",
   "T&K-investoinnit" = "Neljännesvuosittain: investoinnit henkisiin omaisuustuotteisiin (pääosin T&K ja ohjelmistot). Vuosittain: T&K-menot yhteensä, näytetään vuoden neljännellä neljänneksellä.",
   "Investoinnit yhteensä" = "Kiinteän pääoman bruttomuodostus ja sen osat, volyymin muutos vuoden takaisesta (alkuperäinen sarja, kansantalouden tilinpito)."
 )
+
+# Välilehdet, joille lisätään 12 kk euribor -rivi
+KORKORIVI_AIHEET <- c("Asuntorakentaminen", "Käytettyjen asuntojen kauppa")
 
 VARI_NEG <- "#b2182b"
 VARI_POS <- "#2166ac"
@@ -345,7 +348,17 @@ server <- function(input, output, session) {
       d <- do.call(rbind, osat)
       d$jarjestys <- match(d$sarja, unique(d$sarja))
     } else {
-      d <- d[d$aihe == AIHEET[as.integer(id)], ]
+      aihe <- AIHEET[as.integer(id)]
+      kaikki <- d
+      d <- d[d$aihe == aihe, ]
+      # Asuntoaiheisiin lisätään 12 kk euribor viimeiseksi riviksi
+      if (aihe %in% KORKORIVI_AIHEET) {
+        korko <- kaikki[kaikki$aihe == "Korot" & kaikki$sarja == "12 kk euribor", ]
+        if (nrow(korko) && nrow(d)) {
+          korko$jarjestys <- max(d$jarjestys) + 1
+          d <- rbind(d, korko)
+        }
+      }
     }
     d[order(d$jarjestys, d$neljannes), ]
   }
