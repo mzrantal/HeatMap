@@ -265,7 +265,7 @@ ui <- page_sidebar(
     width = 280,
     sliderInput("vuodet", "Aikaväli", min = as.integer(substr(min(DATA$neljannes), 1, 4)),
                 max = as.integer(substr(max(DATA$neljannes), 1, 4)),
-                value = c(max(as.integer(format(Sys.Date(), "%Y")) - 5,
+                value = c(max(as.integer(format(Sys.Date(), "%Y")) - 3,   # oletus: kuluva vuosi - 3, alkaen Q1:stä
                               as.integer(substr(min(DATA$neljannes), 1, 4))),
                           as.integer(substr(max(DATA$neljannes), 1, 4))),
                 step = 1, sep = ""),
