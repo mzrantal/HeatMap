@@ -50,6 +50,7 @@ jobs:
             any::shiny
             any::bslib
             any::ggplot2
+            github::jhuovari/uljas@3655b692b686c549e95a5c23379e23fb4a8a5017
 
       - name: Hae aineisto
         run: Rscript R/paivita_data.R
@@ -58,7 +59,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/data/heatmap.csv
+          for f in app/data/heatmap.csv app/data/datakeskushankkeiden_ajoitus.csv data/uljas_tuonti.csv; do
+            if [ -f "$f" ]; then git add "$f"; fi
+          done
           if git diff --cached --quiet; then
             echo "Aineisto ei muuttunut."
           else

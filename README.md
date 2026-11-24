@@ -10,7 +10,7 @@ Sininen tarkoittaa kasvua ja punainen laskua.
 | Käytettyjen asuntojen kauppa | kauppamäärät (välittäjät: koko maa, PKS, muu Suomi; varainsiirtovero); hintaindeksi alueittain ja talotyypeittäin | Tilastokeskus ashi/13ms, 15iq, 15it |
 | Muu talorakentaminen | muiden kuin asuinrakennusten luvat, aloitukset (rakennusluokittain) ja valmistumiset, m³; volyymi-indeksi; investoinnit | Tilastokeskus raku/156f, raku/156g, ntp/132h |
 | Maa- ja vesirakentaminen | maa- ja vesirakennusinvestoinnit; TOL 42 liikevaihto ja myynnin määrä | Tilastokeskus ntp/132h, rlv/14m1 |
-| Datakeskusten rakentaminen | rakennusajan mukaan: rakennusaikaiset investoinnit (M€), rakenteilla oleva kapasiteetti (MW) ja hankkeet (kpl), investointipäätöksen tai käynnistyksen saaneiden investoinnit; teollisuus- ja varastorakennusten aloitukset (välillinen mittari) | Uutisointi (Dataikkuna), Tilastokeskus raku/156f |
+| Datakeskusten rakentaminen | rakennusajan mukaan: rakennusaikaiset investoinnit (M€), rakenteilla oleva kapasiteetti (MW) ja hankkeet (kpl), investointipäätöksen tai käynnistyksen saaneiden investoinnit; toimistokoneiden ja atk-laitteiden tuonti (SITC 75, 752); teollisuus- ja varastorakennusten aloitukset (välillinen mittari) | Uutisointi (Dataikkuna), Tulli (Uljas), Tilastokeskus raku/156f |
 | T&K-investoinnit | investoinnit henkisiin omaisuustuotteisiin (neljännesvuosittain); T&K-menot (vuosittain, näkyy Q4:llä) | Tilastokeskus ntp/132h, tkke/13ri |
 | Investoinnit yhteensä | kiinteän pääoman bruttomuodostus; yksityiset ja julkiset investoinnit; investointilajit | Tilastokeskus ntp/132h |
 
@@ -104,6 +104,16 @@ Hankkeet kohdistetaan rakennusajalleen (`R/datakeskus_ajoitus.R`):
 Jokaisen hankkeen ajoitus ja sen peruste tallennetaan tiedostoon
 `app/data/datakeskushankkeiden_ajoitus.csv`. Ajoitusta kannattaa tarkistaa
 sieltä. Prosenttimuutokset ovat suuria, kun lähtötaso on pieni.
+
+### Tullin tuontitilasto
+
+Datakeskusten laiteinvestointeja kuvataan Tullin Uljas-tietokannan tuontitilastolla
+(`R/uljas.R`): SITC 75 "Toimistokoneet ja atk-laitteet" ja SITC 752 "Atk-laitteet",
+tuonnin arvo kaikista maista, kuukaudet summattuna neljänneksiksi. Haku käyttää
+R-pakettia [uljas](https://github.com/jhuovari/uljas), joka asennetaan GitHub
+Actionsissa kiinnitettynä tiettyyn versioon. Haettu aineisto tallennetaan tiedostoon
+`data/uljas_tuonti.csv`. Jos haku epäonnistuu, käytetään viimeksi tallennettua
+aineistoa.
 
 ## Paikallinen ajo
 
