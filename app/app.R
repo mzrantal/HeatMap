@@ -192,7 +192,7 @@ heatmap_paneeli <- function(id, otsikko, kuvaus) {
 
 paneelit <- c(
   list(heatmap_paneeli("yleis", "Yleiskuva",
-                       "Kunkin aihealueen pääsarja. Solu = neljänneksen muutos (%) samasta neljänneksestä vuotta aiemmin. 12 kk euriborin muutos on prosenttiyksikköinä, ja sillä on oma väriasteikko (sivuvalikko, oletus ± 1 %-yks. = täysi väri).")),
+                       "Kunkin aihealueen pääsarja. Solu = neljänneksen muutos (%) samasta neljänneksestä vuotta aiemmin. 12 kk euriborin solu on muutos edellisestä neljänneksestä prosenttiyksikköinä, ja sillä on oma väriasteikko (sivuvalikko, oletus ± 0,5 %-yks. = täysi väri).")),
   lapply(seq_along(AIHEET), function(i) heatmap_paneeli(i, AIHEET[i], KUVAUKSET[[AIHEET[i]]])),
   list(nav_panel("Lähteet ja menetelmät", card(
     card_header("Sarjat, lähteet ja menetelmät"),
@@ -271,7 +271,7 @@ ui <- page_sidebar(
                           as.integer(substr(max(DATA$neljannes), 1, 4))),
                 step = 1, sep = ""),
     sliderInput("raja", "Väriasteikon raja (± %)", min = 5, max = 100, value = 25, step = 5),
-    sliderInput("korkoraja", "Euriborin väriasteikko (± %-yks.)", min = 0.25, max = 3, value = 1, step = 0.25),
+    sliderInput("korkoraja", "Euriborin väriasteikko (± %-yks.)", min = 0.1, max = 2, value = 0.5, step = 0.1),
     checkboxInput("arvot", "Näytä luvut soluissa", value = TRUE),
     checkboxInput("ennusteet", paste0("Näytä ennusteet (", ENNUSTE_VIIMEINEN_VUOSI, " loppuun)"), value = TRUE),
     hr(),
@@ -383,8 +383,9 @@ server <- function(input, output, session) {
                       big.mark = " ", decimal.mark = ",")
             ennusteteksti <- if (isTRUE(rivi$ennuste))
               sprintf("<br><b>Ennuste</b>: %s", htmltools::htmlEscape(rivi$ennusteen_lahde)) else ""
-            teksti <- HTML(sprintf("<b>%s, %s</b>: muutos vuoden takaisesta %s &nbsp;·&nbsp; taso %s %s &nbsp;·&nbsp; <span class='text-body-secondary'>%s; %s</span>%s",
-                                   htmltools::htmlEscape(rivi$sarja), rivi$neljannes, muutos, arvo,
+            vertailu <- if (rivi$aihe == "Korot") "muutos edellisestä neljänneksestä" else "muutos vuoden takaisesta"
+            teksti <- HTML(sprintf("<b>%s, %s</b>: %s %s &nbsp;·&nbsp; taso %s %s &nbsp;·&nbsp; <span class='text-body-secondary'>%s; %s</span>%s",
+                                   htmltools::htmlEscape(rivi$sarja), rivi$neljannes, vertailu, muutos, arvo,
                                    htmltools::htmlEscape(rivi$yksikko),
                                    htmltools::htmlEscape(rivi$lahde), htmltools::htmlEscape(rivi$menetelma),
                                    ennusteteksti))

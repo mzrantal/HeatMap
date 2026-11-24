@@ -6,8 +6,8 @@
 # Ennuste: data/korko_ennuste.csv sisältää korkotason ennustepisteet
 # (neljännes, %). Viimeisimmästä toteutuneesta neljänneksestä pisteiden välille
 # interpoloidaan suoraan, ja viimeisen pisteen jälkeen korko pysyy ennallaan.
-# Kuukaudet keskiarvoistetaan neljänneksiksi, ja muutos vuoden takaisesta
-# lasketaan prosenttiyksikköinä (ei prosentteina).
+# Kuukaudet keskiarvoistetaan neljänneksiksi, ja muutos edellisestä
+# neljänneksestä lasketaan prosenttiyksikköinä (ei prosentteina).
 #
 # Onnistunut haku tallennetaan tiedostoon data/korot.csv. Jos rajapintaan ei
 # saada yhteyttä, käytetään viimeksi tallennettua aineistoa.
@@ -67,7 +67,7 @@ KOROT_VIIMEINEN <- list()
 KOROT_ENNUSTE_LAHDE <- list()
 
 # Palauttaa listan neljännessarjoja: arvo = neljänneksen keskikorko (%),
-# muutos = muutos vuoden takaisesta prosenttiyksikköinä. Sarjaan lisätään
+# muutos = muutos edellisestä neljänneksestä prosenttiyksikköinä. Sarjaan lisätään
 # ennuste kuluvan vuoden + 2 vuoden loppuun, jos ennustepisteitä on.
 korot_neljannessarjat <- function() {
   if (!file.exists(KOROT_VALIMUISTI)) return(list())
@@ -93,7 +93,7 @@ korot_neljannessarjat <- function() {
       df <- rbind(df, data.frame(neljannes = tulevat, arvo = arvo))
       KOROT_ENNUSTE_LAHDE[[nimi]] <<- paste(unique(pisteet$lahde), collapse = "; ")
     }
-    edellinen <- df$arvo[match(neljannes_siirto(df$neljannes, 4), df$neljannes)]
+    edellinen <- df$arvo[match(neljannes_siirto(df$neljannes, 1), df$neljannes)]   # edellinen neljännes
     df$muutos <- df$arvo - edellinen
     df
   })

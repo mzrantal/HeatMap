@@ -377,7 +377,7 @@ rivit <- list(
     paste(TK, "raku/156f (välillinen mittari)"), "m³"),
 
   # --- Korot (näytetään yleiskuvassa; muutos prosenttiyksikköinä)
-  r("Korot", "12 kk euribor", KOROT[["12 kk euribor"]], "EKP (FM, Euribor)", "%", "Neljänneksen keskikorko; muutos vuoden takaisesta prosenttiyksikköinä"),
+  r("Korot", "12 kk euribor", KOROT[["12 kk euribor"]], "EKP (FM, Euribor)", "%", "Neljänneksen keskikorko; muutos edellisestä neljänneksestä prosenttiyksikköinä"),
 
   # --- T&K-investoinnit
   r("T&K-investoinnit", "Henkiset omaisuustuotteet (T&K, ohjelmistot)", NTP$P51KN115_N117,

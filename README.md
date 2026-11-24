@@ -50,9 +50,10 @@ Kaikki sarjat katkaistaan kuluvan vuoden + 2 vuoden viimeiseen neljännekseen
 
 ## Korot
 
-Yleiskuvassa on 12 kk euribor (EKP:n tietopalvelu, `R/korot.R`). Sen muutos
-vuoden takaisesta näytetään prosenttiyksikköinä, ja sillä on oma väriasteikko
-(sivuvalikko, oletus ± 1 %-yks. = täysi väri). Ennuste perustuu tiedoston
+Yleiskuvassa on 12 kk euribor (EKP:n tietopalvelu, `R/korot.R`). Toisin kuin
+muissa sarjoissa, sen solu kertoo muutoksen edellisestä neljänneksestä
+prosenttiyksikköinä, ja sillä on oma väriasteikko (sivuvalikko, oletus
+± 0,5 %-yks. = täysi väri). Ennuste perustuu tiedoston
 `data/korko_ennuste.csv` korkotason ennustepisteisiin: viimeisimmästä
 toteutuneesta neljänneksestä pisteiden välille interpoloidaan suoraan, ja
 viimeisen pisteen jälkeen korko pysyy ennallaan. Pisteitä voi päivittää käsin.
