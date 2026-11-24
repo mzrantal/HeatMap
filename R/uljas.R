@@ -71,6 +71,9 @@ uljas_paivita <- function() {
     }
     if (length(sarjat) == 0) next
     s <- do.call(rbind, sarjat)
+    # Tyhjät arvot pois ennen yhdistämistä: uudemmassa kuutiossa vuoden 2025
+    # kuukausilla ei ole arvoja, vaikka aikakoodit ovat mukana
+    s <- s[!is.na(s$arvo), ]
     s <- s[!duplicated(s$kuukausi, fromLast = TRUE), ]   # uudempi kuutio ensisijainen
     s$sarja <- t$nimi
     osat[[length(osat) + 1]] <- s
