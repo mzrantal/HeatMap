@@ -64,6 +64,18 @@ KUVAUKSET <- list(
 # Välilehdet, joille lisätään 12 kk euribor -rivi
 KORKORIVI_AIHEET <- c("Asuntorakentaminen", "Käytettyjen asuntojen kauppa", "Muu talorakentaminen")
 
+# Rakentamisen työlliset (työvoimatutkimus) välilehdittäin
+TYOLLISET_RIVIT <- list(
+  "Asuntorakentaminen" = c("Työlliset: talonrakentaminen (TOL 41)",
+                           "Työlliset: erikoistunut rakennustoiminta (TOL 43)",
+                           "Työlliset: rakentaminen yhteensä (TOL F)"),
+  "Muu talorakentaminen" = c("Työlliset: talonrakentaminen (TOL 41)",
+                             "Työlliset: erikoistunut rakennustoiminta (TOL 43)",
+                             "Työlliset: rakentaminen yhteensä (TOL F)"),
+  "Maa- ja vesirakentaminen" = c("Työlliset: maa- ja vesirakentaminen (TOL 42)",
+                                 "Työlliset: rakentaminen yhteensä (TOL F)")
+)
+
 VARI_NEG <- "#b2182b"
 VARI_POS <- "#2166ac"
 VARI_KESKI <- "#f7f7f7"
@@ -352,6 +364,15 @@ server <- function(input, output, session) {
       kaikki <- d
       d <- d[d$aihe == aihe, ]
       # Valituille välilehdille lisätään 12 kk euribor viimeiseksi riviksi
+      # Rakentamisen välilehdille työlliset ennen euribor-riviä
+      if (!is.null(TYOLLISET_RIVIT[[aihe]]) && nrow(d)) {
+        nimet <- TYOLLISET_RIVIT[[aihe]]
+        ty <- kaikki[kaikki$aihe == "Työlliset" & kaikki$sarja %in% nimet, ]
+        if (nrow(ty)) {
+          ty$jarjestys <- max(d$jarjestys) + match(ty$sarja, nimet)
+          d <- rbind(d, ty)
+        }
+      }
       if (aihe %in% KORKORIVI_AIHEET) {
         korko <- kaikki[kaikki$aihe == "Korot" & kaikki$sarja == "12 kk euribor", ]
         if (nrow(korko) && nrow(d)) {

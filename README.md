@@ -49,6 +49,16 @@ näkyviin sivuvalikosta.
 Kaikki sarjat katkaistaan kuluvan vuoden + 2 vuoden viimeiseen neljännekseen
 (vuonna 2026: 2028Q4). Raja siirtyy automaattisesti vuodenvaihteessa.
 
+## Rakentamisen työlliset
+
+Asuntorakentamisen, muun talorakentamisen sekä maa- ja vesirakentamisen
+välilehdillä on rakentamisen työlliset Tilastokeskuksen työvoimatutkimuksesta
+(tyti/137l, neljännesvuosittain): talonrakentaminen (TOL 41), erikoistunut
+rakennustoiminta (TOL 43) ja rakentaminen yhteensä (TOL F). Maa- ja
+vesirakentamista (TOL 42) ei julkaista omana rivinään, joten se lasketaan
+erotuksena F − 41 − 43. Työvoimatutkimus on otantatutkimus, ja luvut on
+pyöristetty tuhansiin, joten pienen TOL 42 -sarjan vuosimuutokset vaihtelevat paljon.
+
 ## Korot
 
 Yleiskuvassa on 12 kk euribor (EKP:n tietopalvelu, `R/korot.R`). Toisin kuin

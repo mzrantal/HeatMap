@@ -175,6 +175,25 @@ RLV <- px_hae("rlv/14m1.px", list(
   luokkaryhma_2_20180301 = c("lv", "mi"),
   contentscode = c("rlv-alkuperainen", "rlv-muutosprosentti")))
 
+message("Haetaan rakentamisen työlliset (tyti/137l)...")
+# Työvoimatutkimus: työlliset toimialoittain neljännesvuosittain. TOL 42
+# (maa- ja vesirakentaminen) ei ole taulukossa omana rivinään, joten se
+# lasketaan erotuksena F - 41 - 43 (otantatutkimus: pyöristys ja otantavaihtelu
+# näkyvät pienessä sarjassa).
+TYOLLISET <- px_hae("tyti/137l.px", list(
+  toimiala_79_20180101 = c("F", "F41", "F43"),
+  contentscode = "tyti-Tyolliset"))
+tyolliset_sarja <- function(toimiala) {
+  x <- TYOLLISET[TYOLLISET$toimiala_79_20180101 == toimiala, ]
+  tasosta(data.frame(neljannes = x$timeperiod_q, arvo = x$arvo))
+}
+tyolliset_tol42 <- function() {
+  f <- TYOLLISET[TYOLLISET$toimiala_79_20180101 == "F", ]
+  t41 <- TYOLLISET$arvo[TYOLLISET$toimiala_79_20180101 == "F41"][match(f$timeperiod_q, TYOLLISET$timeperiod_q[TYOLLISET$toimiala_79_20180101 == "F41"])]
+  t43 <- TYOLLISET$arvo[TYOLLISET$toimiala_79_20180101 == "F43"][match(f$timeperiod_q, TYOLLISET$timeperiod_q[TYOLLISET$toimiala_79_20180101 == "F43"])]
+  tasosta(data.frame(neljannes = f$timeperiod_q, arvo = f$arvo - t41 - t43))
+}
+
 message("Haetaan vanhojen osakeasuntojen hinnat ja kaupat (ashi)...")
 # Hintaindeksi: ketjutettu neljännesvuosi-indeksi 2015=100 (sarja alkaa 2015)
 ASHI_HINTA <- px_hae("ashi/15it.px", list(
@@ -375,6 +394,17 @@ rivit <- list(
     "Tuonnin arvo, kuukaudet summattu neljänneksiksi; neljännes / sama neljännes vuotta aiemmin"),
   r("Datakeskusten rakentaminen", "Aloitukset: teollisuus- ja varastorakennukset", raku_sarja(RAKU, "2", "09T12", "raku-tilavuusToimenpide"),
     paste(TK, "raku/156f (välillinen mittari)"), "m³"),
+
+  # --- Rakentamisen työlliset (näytetään rakentamisen välilehdillä)
+  r("Työlliset", "Työlliset: rakentaminen yhteensä (TOL F)", tyolliset_sarja("F"),
+    paste(TK, "tyti/137l"), "1000 henkilöä", "Työvoimatutkimus, neljännes / sama neljännes vuotta aiemmin"),
+  r("Työlliset", "Työlliset: talonrakentaminen (TOL 41)", tyolliset_sarja("F41"),
+    paste(TK, "tyti/137l"), "1000 henkilöä", "Työvoimatutkimus, neljännes / sama neljännes vuotta aiemmin"),
+  r("Työlliset", "Työlliset: maa- ja vesirakentaminen (TOL 42)", tyolliset_tol42(),
+    paste(TK, "tyti/137l (laskettu: F - 41 - 43)"), "1000 henkilöä",
+    "Työvoimatutkimus, laskettu erotuksena F - 41 - 43; neljännes / sama neljännes vuotta aiemmin"),
+  r("Työlliset", "Työlliset: erikoistunut rakennustoiminta (TOL 43)", tyolliset_sarja("F43"),
+    paste(TK, "tyti/137l"), "1000 henkilöä", "Työvoimatutkimus, neljännes / sama neljännes vuotta aiemmin"),
 
   # --- Korot (näytetään yleiskuvassa; muutos prosenttiyksikköinä)
   r("Korot", "12 kk euribor", KOROT[["12 kk euribor"]], "EKP (FM, Euribor)", "%", "Neljänneksen keskikorko; muutos edellisestä neljänneksestä prosenttiyksikköinä"),
