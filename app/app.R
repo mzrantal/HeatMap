@@ -47,6 +47,7 @@ YLEISKUVA <- list(
   c("Maa- ja vesirakentaminen", "Maa- ja vesirakennusinvestoinnit"),
   c("Datakeskusten rakentaminen", "Rakennusaikaiset investoinnit"),
   c("T&K-investoinnit", "Henkiset omaisuustuotteet (T&K, ohjelmistot)"),
+  c("Työlliset", "Työlliset: rakentaminen yhteensä (TOL F)"),
   c("Korot", "12 kk euribor"),
   c("Investoinnit yhteensä", "Kiinteän pääoman bruttomuodostus")
 )
